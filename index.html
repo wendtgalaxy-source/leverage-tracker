@@ -47,14 +47,13 @@
     table { width: 100%; border-collapse: collapse; font-size: 13px; }
     th, td { padding: 12px; text-align: left; border-bottom: 1px solid var(--border); }
     .slider { width: 100%; margin: 10px 0; accent-color: var(--accent-indigo); }
+    .sim-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px; }
   </style>
 </head>
 <body>
 
 <div class="container">
-  <header>
-    <h1>Pro Leverage Tracker</h1>
-  </header>
+  <header><h1>Pro Leverage Tracker</h1></header>
 
   <div class="tabs">
     <button class="tab-btn active" onclick="switchTab('tab-dashboard')">📊 Dashboard</button>
@@ -73,22 +72,22 @@
           <div class="form-group"><label>BTC Menge</label><input type="number" id="dash_btc_amount" step="0.00001" oninput="runDashboardCalc()"></div>
           <div class="form-group"><label>STRC Menge</label><input type="number" id="dash_strc_amount" step="0.01" oninput="runDashboardCalc()"></div>
         </div>
-        <button class="btn" style="background:var(--bg-dark); border:1px solid var(--border); margin-bottom:10px;" onclick="fetchLivePrices()">🔄 Kurse aktualisieren</button>
-        <button class="btn" onclick="syncFromLog()">📥 Aus Log übernehmen</button>
+        <button class="btn" style="background:var(--bg-dark); border:1px solid var(--border); margin-bottom:10px;" onclick="fetchLivePrices()">🔄 Kurse laden</button>
+        <button class="btn" onclick="syncFromLog()">📥 Aus Log laden</button>
       </div>
       <div class="card">
-        <h2>Vermögenswerte</h2>
+        <h2>Vermögen</h2>
         <div style="height: 200px;"><canvas id="donutChart"></canvas></div>
       </div>
     </div>
     <div class="card">
       <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap:15px;">
         <div class="kpi-box"><label>Restschuld</label><span class="kval neg" id="dash_kpi_debt">0 €</span></div>
-        <div class="kpi-box"><label>Portfolio Wert</label><span class="kval pos" id="dash_kpi_assets">0 €</span></div>
-        <div class="kpi-box" style="border-color: var(--accent-indigo);"><label>Noch zu investieren</label><span class="kval" id="dash_kpi_to_invest" style="color:var(--accent-indigo)">0 €</span></div>
+        <div class="kpi-box"><label>Portfolio</label><span class="kval pos" id="dash_kpi_assets">0 €</span></div>
+        <div class="kpi-box"><label>Noch investieren</label><span class="kval" id="dash_kpi_to_invest" style="color:var(--accent-indigo)">0 €</span></div>
       </div>
       <div class="kpi-box" style="margin-top:15px; background:var(--success-bg); border-color:var(--success);">
-        <label style="color:var(--success)">Netto Liquidationswert</label>
+        <label style="color:var(--success)">Netto heute</label>
         <span class="kval pos" id="dash_kpi_net" style="font-size:32px;">0 €</span>
       </div>
     </div>
@@ -96,9 +95,9 @@
 
   <div id="tab-log" class="tab-content">
     <div class="card">
-      <h2>Transaktion hinzufügen</h2>
+      <h2>Kauf loggen</h2>
       <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
-        <div class="form-group"><label>Asset</label><select id="log_asset"><option value="BTC">Bitcoin</option><option value="STRC">STRC</option></select></div>
+        <div class="form-group"><label>Asset</label><select id="log_asset"><option value="BTC">BTC</option><option value="STRC">STRC</option></select></div>
         <div class="form-group"><label>Invest (€)</label><input type="number" id="log_fiat"></div>
         <div class="form-group"><label>Kurs (€)</label><input type="number" id="log_price"></div>
         <div class="form-group"><label>Datum</label><input type="date" id="log_date"></div>
@@ -113,17 +112,23 @@
 
   <div id="tab-sim" class="tab-content">
     <div class="card">
-      <h2>Exit-Strategie Simulator</h2>
+      <h2>Exit Simulator</h2>
+      <div class="form-group">
+        <label>Geplantes Exit-Datum</label>
+        <input type="date" id="sim_exit_date" oninput="runSim()">
+      </div>
       <div class="form-group">
         <label>BTC Zielkurs: <span id="sim_btc_val">150.000</span> €</label>
         <input type="range" min="60000" max="500000" step="5000" value="150000" class="slider" id="sim_btc_slider" oninput="runSim()">
       </div>
-      <div class="form-group">
-        <label>STRC Zielkurs: <span id="sim_strc_val">150</span> €</label>
-        <input type="range" min="50" max="1000" step="10" value="150" class="slider" id="sim_strc_slider" oninput="runSim()">
+      
+      <div class="sim-stats">
+        <div class="kpi-box"><label>Restschuld (Exit)</label><span class="kval neg" id="sim_debt_at_exit" style="font-size:16px;">0 €</span></div>
+        <div class="kpi-box"><label>Zinsen bis dahin</label><span class="kval" id="sim_interest_paid" style="font-size:16px; color:var(--text-muted);">0 €</span></div>
       </div>
-      <div class="kpi-box" style="background:var(--bg-dark);">
-        <label>Voraussichtlicher Netto-Gewinn</label>
+
+      <div class="kpi-box" style="background:var(--bg-dark); margin-top: 15px; border-color: var(--success);">
+        <label style="color:var(--success)">Netto-Cash nach Volltilgung</label>
         <span class="kval pos" id="sim_result" style="font-size:32px;">0 €</span>
       </div>
     </div>
@@ -131,12 +136,12 @@
 
   <div id="tab-settings" class="tab-content">
     <div class="card">
-      <h2>Kredit & System</h2>
+      <h2>Kredit Settings</h2>
       <div class="form-group"><label>Kreditsumme (€)</label><input type="number" id="set_credit_amount"></div>
       <div class="form-group"><label>Zins (%)</label><input type="number" id="set_credit_interest" step="0.01"></div>
-      <div class="form-group"><label>Monatliche Rate (€)</label><input type="number" id="set_credit_rate"></div>
-      <div class="form-group"><label>Startdatum Kredit</label><input type="date" id="set_credit_start"></div>
-      <button class="btn" onclick="saveSettings()">💾 Einstellungen speichern</button>
+      <div class="form-group"><label>Rate (€)</label><input type="number" id="set_credit_rate"></div>
+      <div class="form-group"><label>Startdatum</label><input type="date" id="set_credit_start"></div>
+      <button class="btn" onclick="saveSettings()">💾 Speichern</button>
     </div>
   </div>
 </div>
@@ -145,7 +150,7 @@
 const STORAGE_KEY = 'leverage_tracker_pro_data';
 let appState = {
   cred_amt: 50000, cred_int: 5.45, cred_rate: 717.40, cred_start: "2026-05-15",
-  dash_btc_p: 65000, dash_strc_p: 85.0, dash_btc_a: 0, dash_strc_a: 0,
+  dash_btc_p: 65000, dash_strc_p: 92.0, dash_btc_a: 0, dash_strc_a: 0,
   transactions: []
 };
 
@@ -155,19 +160,20 @@ function init() {
   const saved = localStorage.getItem(STORAGE_KEY);
   if(saved) appState = JSON.parse(saved);
   
-  // Migration von v2.2 falls nötig
-  const old = localStorage.getItem('leverage_app_v2.2');
-  if(old && !saved) { appState = JSON.parse(old); saveState(); }
-
+  // Exit Datum Standard: Heute + 3 Jahre
+  const d = new Date();
+  d.setFullYear(d.getFullYear() + 3);
+  document.getElementById('sim_exit_date').valueAsDate = d;
+  
   document.getElementById('log_date').valueAsDate = new Date();
-  loadSettingsFields();
+  loadFields();
   renderLog();
   runDashboardCalc();
 }
 
 function saveState() { localStorage.setItem(STORAGE_KEY, JSON.stringify(appState)); }
 
-function loadSettingsFields() {
+function loadFields() {
   document.getElementById('set_credit_amount').value = appState.cred_amt;
   document.getElementById('set_credit_interest').value = appState.cred_int;
   document.getElementById('set_credit_rate').value = appState.cred_rate;
@@ -183,7 +189,7 @@ function saveSettings() {
   appState.cred_int = parseFloat(document.getElementById('set_credit_interest').value);
   appState.cred_rate = parseFloat(document.getElementById('set_credit_rate').value);
   appState.cred_start = document.getElementById('set_credit_start').value;
-  saveState(); alert("Gespeichert!"); runDashboardCalc();
+  saveState(); runDashboardCalc(); alert("Gespeichert");
 }
 
 function switchTab(id) {
@@ -198,23 +204,23 @@ function addTransaction() {
   const fiat = parseFloat(document.getElementById('log_fiat').value);
   const price = parseFloat(document.getElementById('log_price').value);
   const date = document.getElementById('log_date').value;
-  if(!fiat || !price) return;
-  const amount = fiat / price;
-  appState.transactions.push({ id: Date.now(), asset, date, fiat, price, amount });
-  saveState(); renderLog();
+  if(fiat && price) {
+    appState.transactions.push({ id: Date.now(), asset, date, fiat, price, amount: fiat/price });
+    saveState(); renderLog(); runDashboardCalc();
+  }
 }
 
 function renderLog() {
   const tbody = document.getElementById('log_tbody');
   tbody.innerHTML = '';
   appState.transactions.sort((a,b) => new Date(b.date) - new Date(a.date)).forEach(t => {
-    tbody.innerHTML += `<tr><td>${t.date}</td><td>${t.asset}</td><td>${t.fiat}€</td><td>${t.amount.toFixed(5)}</td><td><button onclick="deleteTx(${t.id})">✕</button></td></tr>`;
+    tbody.innerHTML += `<tr><td>${t.date}</td><td>${t.asset}</td><td>${t.fiat}€</td><td>${t.amount.toFixed(5)}</td><td><button onclick="deleteTx(${t.id})" style="background:none; border:none; color:var(--danger)">✕</button></td></tr>`;
   });
 }
 
 function deleteTx(id) {
   appState.transactions = appState.transactions.filter(t => t.id !== id);
-  saveState(); renderLog();
+  saveState(); renderLog(); runDashboardCalc();
 }
 
 function syncFromLog() {
@@ -225,6 +231,21 @@ function syncFromLog() {
   runDashboardCalc();
 }
 
+function getMonths(start, end) {
+  return Math.max(0, (end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth()));
+}
+
+function calculateDebtAt(months) {
+  let debt = appState.cred_amt;
+  let totalInterest = 0;
+  for(let i=0; i < months; i++) {
+    let monthlyInterest = debt * (appState.cred_int/100/12);
+    totalInterest += monthlyInterest;
+    debt = debt + monthlyInterest - appState.cred_rate;
+  }
+  return { debt: Math.max(0, debt), interest: totalInterest };
+}
+
 function runDashboardCalc() {
   appState.dash_btc_p = parseFloat(document.getElementById('dash_btc_price').value) || 0;
   appState.dash_strc_p = parseFloat(document.getElementById('dash_strc_price').value) || 0;
@@ -232,22 +253,16 @@ function runDashboardCalc() {
   appState.dash_strc_a = parseFloat(document.getElementById('dash_strc_amount').value) || 0;
   saveState();
 
-  // Restschuld Logik
-  const start = new Date(appState.cred_start);
-  const monthsPaid = Math.max(0, (new Date().getFullYear() - start.getFullYear()) * 12 + (new Date().getMonth() - start.getMonth()) + 1);
-  let debt = appState.cred_amt;
-  for(let i=0; i<monthsPaid; i++) debt = debt * (1 + (appState.cred_int/100)/12) - appState.cred_rate;
-
-  // Noch zu investieren Logik
-  const totalInvested = appState.transactions.reduce((sum, t) => sum + t.fiat, 0);
-  const toInvest = Math.max(0, appState.cred_amt - totalInvested);
-
-  const assets = (appState.dash_btc_a * appState.dash_btc_p) + (appState.dash_strc_a * appState.dash_strc_p);
+  const monthsPassed = getMonths(new Date(appState.cred_start), new Date());
+  const currentStatus = calculateDebtAt(monthsPassed);
   
-  document.getElementById('dash_kpi_debt').innerText = debt.toLocaleString() + " €";
-  document.getElementById('dash_kpi_assets').innerText = assets.toLocaleString() + " €";
-  document.getElementById('dash_kpi_to_invest').innerText = toInvest.toLocaleString() + " €";
-  document.getElementById('dash_kpi_net').innerText = (assets - debt).toLocaleString() + " €";
+  const invested = appState.transactions.reduce((s, t) => s + t.fiat, 0);
+  const assets = (appState.dash_btc_a * appState.dash_btc_p) + (appState.dash_strc_a * appState.dash_strc_p);
+
+  document.getElementById('dash_kpi_debt').innerText = Math.round(currentStatus.debt).toLocaleString() + " €";
+  document.getElementById('dash_kpi_assets').innerText = Math.round(assets).toLocaleString() + " €";
+  document.getElementById('dash_kpi_to_invest').innerText = Math.round(appState.cred_amt - invested).toLocaleString() + " €";
+  document.getElementById('dash_kpi_net').innerText = Math.round(assets - currentStatus.debt).toLocaleString() + " €";
 
   updateChart(appState.dash_btc_a * appState.dash_btc_p, appState.dash_strc_a * appState.dash_strc_p);
   runSim();
@@ -259,20 +274,23 @@ function updateChart(b, s) {
   donutChartInst = new Chart(ctx, {
     type: 'doughnut',
     data: { labels: ['BTC', 'STRC'], datasets: [{ data: [b, s], backgroundColor: ['#fbbf24', '#6366f1'], borderWidth: 0 }] },
-    options: { maintainAspectRatio: false }
+    options: { maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { color: '#94a3b8' } } } }
   });
 }
 
 function runSim() {
-  const btcP = document.getElementById('sim_btc_slider').value;
-  const strcP = document.getElementById('sim_strc_slider').value;
-  document.getElementById('sim_btc_val').innerText = parseInt(btcP).toLocaleString();
-  document.getElementById('sim_strc_val').innerText = strcP;
+  const exitDate = new Date(document.getElementById('sim_exit_date').value);
+  const btcTarget = document.getElementById('sim_btc_slider').value;
+  document.getElementById('sim_btc_val').innerText = parseInt(btcTarget).toLocaleString();
 
-  const futureAssets = (appState.dash_btc_a * btcP) + (appState.dash_strc_a * strcP);
-  // Wir rechnen hier der Einfachheit halber gegen die aktuelle Restschuld
-  const debt = parseFloat(document.getElementById('dash_kpi_debt').innerText.replace(/[^\d.-]/g, ''));
-  document.getElementById('sim_result').innerText = (futureAssets - debt).toLocaleString() + " €";
+  const monthsToExit = getMonths(new Date(appState.cred_start), exitDate);
+  const simStatus = calculateDebtAt(monthsToExit);
+
+  const futureAssets = (appState.dash_btc_a * btcTarget) + (appState.dash_strc_a * appState.dash_strc_p);
+  
+  document.getElementById('sim_debt_at_exit').innerText = Math.round(simStatus.debt).toLocaleString() + " €";
+  document.getElementById('sim_interest_paid').innerText = Math.round(simStatus.interest).toLocaleString() + " €";
+  document.getElementById('sim_result').innerText = Math.round(futureAssets - simStatus.debt).toLocaleString() + " €";
 }
 
 async function fetchLivePrices() {
