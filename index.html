@@ -185,7 +185,15 @@ function init() {
     appState = JSON.parse(saved);
   } else {
     const old = localStorage.getItem('leverage_app_v2.2');
-    if(old) { appState = JSON.parse(old); saveState(); }
+    if(old) { appState = JSON.parse(old); }
+  }
+  
+  // MIGRATION: Repariert alte Log-Einträge, die noch keinen Typ hatten
+  if(appState.transactions) {
+    appState.transactions.forEach(t => {
+      if(!t.type) t.type = 'BUY'; 
+    });
+    saveState();
   }
   
   const d = new Date(); d.setFullYear(d.getFullYear() + 3);
@@ -194,7 +202,7 @@ function init() {
   
   loadFields();
   renderLog();
-  toggleLogFields(); // UI Logik beim Start anwenden
+  toggleLogFields();
   runDashboardCalc();
 }
 
@@ -224,7 +232,6 @@ function switchTab(id) {
   event.currentTarget.classList.add('active');
 }
 
-// Dynamisches Ausgrauen der Felder
 function toggleLogFields() {
   const type = document.getElementById('log_type').value;
   const asset = document.getElementById('log_asset').value;
@@ -253,7 +260,6 @@ function addTransaction() {
   if(!fiat) return alert("Bitte Betrag eingeben!");
 
   const isCashOnly = (type === 'CREDIT_IN' || type === 'ZINS' || asset === 'CASH');
-  
   let amount = 0;
   let finalPrice = 0;
 
@@ -266,7 +272,6 @@ function addTransaction() {
   appState.transactions.push({ id: Date.now(), type, asset, date, fiat, price: finalPrice, amount });
   saveState(); renderLog(); runDashboardCalc();
   
-  // Felder nach dem Speichern leeren
   document.getElementById('log_fiat').value = '';
   document.getElementById('log_price').value = '';
   document.getElementById('log_amount_manual').value = '';
@@ -276,8 +281,9 @@ function renderLog() {
   const tbody = document.getElementById('log_tbody');
   tbody.innerHTML = '';
   appState.transactions.sort((a,b) => new Date(b.date) - new Date(a.date)).forEach(t => {
-    const isPlus = t.type === 'ZINS' || t.type === 'SELL' || t.type === 'CREDIT_IN';
-    const typeLabel = t.type.replace('CREDIT_IN', 'Kredit').replace('BUY', 'Kauf').replace('SELL', 'Verkauf').replace('ZINS', 'Zins');
+    const type = t.type || 'BUY'; // Fallback zur Sicherheit
+    const isPlus = type === 'ZINS' || type === 'SELL' || type === 'CREDIT_IN';
+    const typeLabel = type.replace('CREDIT_IN', 'Kredit').replace('BUY', 'Kauf').replace('SELL', 'Verkauf').replace('ZINS', 'Zins');
     tbody.innerHTML += `<tr><td>${t.date}</td><td>${typeLabel}</td><td>${t.asset}</td><td style="color:${isPlus?'var(--success)':'var(--danger)'}">${t.fiat}€</td><td>${t.amount > 0 ? t.amount.toFixed(5) : '-'}</td><td><button onclick="deleteTx(${t.id})" style="background:none; border:none; color:var(--danger)">✕</button></td></tr>`;
   });
 }
@@ -290,8 +296,9 @@ function deleteTx(id) {
 function syncFromLog() {
   let btc = 0, strc = 0;
   appState.transactions.forEach(t => {
-    if(t.asset === 'BTC' && t.amount > 0) btc += (t.type === 'BUY' ? t.amount : -t.amount);
-    if(t.asset === 'STRC' && t.amount > 0) strc += (t.type === 'BUY' ? t.amount : -t.amount);
+    const type = t.type || 'BUY';
+    if(t.asset === 'BTC' && t.amount > 0) btc += (type === 'BUY' ? t.amount : -t.amount);
+    if(t.asset === 'STRC' && t.amount > 0) strc += (type === 'BUY' ? t.amount : -t.amount);
   });
   document.getElementById('dash_btc_amount').value = Math.max(0, btc).toFixed(6);
   document.getElementById('dash_strc_amount').value = Math.max(0, strc).toFixed(2);
@@ -324,8 +331,9 @@ function runDashboardCalc() {
 
   let logCash = 0;
   appState.transactions.forEach(t => {
-    if(t.type === 'CREDIT_IN' || t.type === 'SELL' || t.type === 'ZINS') logCash += t.fiat;
-    if(t.type === 'BUY') logCash -= t.fiat;
+    const type = t.type || 'BUY';
+    if(type === 'CREDIT_IN' || type === 'SELL' || type === 'ZINS') logCash += t.fiat;
+    if(type === 'BUY') logCash -= t.fiat;
   });
 
   const monthsPassed = getMonths(appState.cred_start, new Date());
@@ -363,8 +371,9 @@ function runSim() {
   
   let logCash = 0;
   appState.transactions.forEach(t => {
-    if(t.type === 'CREDIT_IN' || t.type === 'SELL' || t.type === 'ZINS') logCash += t.fiat;
-    if(t.type === 'BUY') logCash -= t.fiat;
+    const type = t.type || 'BUY';
+    if(type === 'CREDIT_IN' || type === 'SELL' || type === 'ZINS') logCash += t.fiat;
+    if(type === 'BUY') logCash -= t.fiat;
   });
 
   const monthsToExit = getMonths(appState.cred_start, exitDate);
