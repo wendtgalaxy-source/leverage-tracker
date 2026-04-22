@@ -39,7 +39,8 @@
     .card h2 { font-size: 14px; font-weight: 700; margin-bottom: 15px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; }
     .form-group { margin-bottom: 15px; }
     label { display: block; font-size: 11px; color: var(--text-muted); font-weight: 700; margin-bottom: 5px; text-transform: uppercase; }
-    input, select { width: 100%; background: var(--bg-dark); border: 1px solid var(--border); color: var(--text-main); padding: 10px; border-radius: 8px; font-size: 15px; }
+    input, select { width: 100%; background: var(--bg-dark); border: 1px solid var(--border); color: var(--text-main); padding: 10px; border-radius: 8px; font-size: 15px; transition: all 0.3s; }
+    input:disabled { opacity: 0.3; cursor: not-allowed; }
     .btn { background: var(--accent); color: white; border: none; padding: 12px; border-radius: 8px; font-weight: 700; cursor: pointer; width: 100%; text-align: center; display: inline-block; text-decoration: none; }
     .btn-secondary { background: var(--bg-dark); border: 1px solid var(--border); }
     .kpi-box { background: rgba(0,0,0,0.2); border: 1px solid var(--border); border-radius: 10px; padding: 15px; text-align: center; }
@@ -98,17 +99,24 @@
       <h2>Transaktion hinzufügen</h2>
       <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
         <div class="form-group"><label>Typ</label>
-          <select id="log_type">
+          <select id="log_type" onchange="toggleLogFields()">
             <option value="CREDIT_IN">Krediteingang (Startkapital)</option>
             <option value="BUY">Kauf (Cash sinkt)</option>
             <option value="ZINS">Zins/Dividende (Cash steigt)</option>
             <option value="SELL">Verkauf (Cash steigt)</option>
           </select>
         </div>
-        <div class="form-group"><label>Asset</label><select id="log_asset"><option value="CASH">Nur Cash / Kredit</option><option value="BTC">BTC</option><option value="STRC">STRC</option></select></div>
+        <div class="form-group"><label>Asset</label>
+          <select id="log_asset" onchange="toggleLogFields()">
+            <option value="CASH">Nur Cash / Kredit</option>
+            <option value="BTC">BTC</option>
+            <option value="STRC">STRC</option>
+          </select>
+        </div>
         <div class="form-group"><label>Betrag (€)</label><input type="number" id="log_fiat"></div>
-        <div class="form-group"><label>Kurs (€)</label><input type="number" id="log_price" value="1"></div>
-        <div class="form-group" style="grid-column: span 2;"><label>Datum</label><input type="date" id="log_date"></div>
+        <div class="form-group"><label>Kurs (€)</label><input type="number" id="log_price" step="0.01"></div>
+        <div class="form-group"><label>Genaue Menge (Optional)</label><input type="number" id="log_amount_manual" step="0.00000001" placeholder="Leer = autom. Berechnung"></div>
+        <div class="form-group"><label>Datum</label><input type="date" id="log_date"></div>
       </div>
       <button class="btn" style="background:var(--success)" onclick="addTransaction()">➕ Speichern</button>
       <table style="margin-top:20px;">
@@ -140,7 +148,6 @@
   <div id="tab-settings" class="tab-content">
     <div class="card">
       <h2>Kredit Settings</h2>
-      <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 15px;">Der Kreditbetrag wird nun direkt über das Log (Krediteingang) gesteuert.</p>
       <div style="display:grid; grid-template-columns: 1fr; gap:10px;">
         <div class="form-group"><label>Zins Kredit p.a. (%)</label><input type="number" id="set_credit_interest" step="0.01"></div>
         <div class="form-group"><label>Monatliche Rate (€)</label><input type="number" id="set_credit_rate"></div>
@@ -151,7 +158,6 @@
 
     <div class="card" style="border-color: var(--accent-indigo);">
       <h2>Datensicherung & Sync</h2>
-      <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 15px;">Exportiere deine Daten als Datei, um sie z.B. per Threema zu teilen.</p>
       <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
         <button class="btn btn-secondary" onclick="exportData()">📤 Exportieren</button>
         <label class="btn btn-secondary" style="margin-bottom:0; cursor:pointer;">
@@ -175,7 +181,12 @@ let donutChartInst = null;
 
 function init() {
   const saved = localStorage.getItem(STORAGE_KEY);
-  if(saved) appState = JSON.parse(saved);
+  if(saved) {
+    appState = JSON.parse(saved);
+  } else {
+    const old = localStorage.getItem('leverage_app_v2.2');
+    if(old) { appState = JSON.parse(old); saveState(); }
+  }
   
   const d = new Date(); d.setFullYear(d.getFullYear() + 3);
   document.getElementById('sim_exit_date').valueAsDate = d;
@@ -183,6 +194,7 @@ function init() {
   
   loadFields();
   renderLog();
+  toggleLogFields(); // UI Logik beim Start anwenden
   runDashboardCalc();
 }
 
@@ -212,19 +224,52 @@ function switchTab(id) {
   event.currentTarget.classList.add('active');
 }
 
+// Dynamisches Ausgrauen der Felder
+function toggleLogFields() {
+  const type = document.getElementById('log_type').value;
+  const asset = document.getElementById('log_asset').value;
+  const priceInput = document.getElementById('log_price');
+  const amountInput = document.getElementById('log_amount_manual');
+
+  if(type === 'CREDIT_IN' || type === 'ZINS' || asset === 'CASH') {
+    priceInput.disabled = true;
+    amountInput.disabled = true;
+    priceInput.value = '';
+    amountInput.value = '';
+  } else {
+    priceInput.disabled = false;
+    amountInput.disabled = false;
+  }
+}
+
 function addTransaction() {
   const type = document.getElementById('log_type').value;
   const asset = document.getElementById('log_asset').value;
   const fiat = parseFloat(document.getElementById('log_fiat').value);
   const price = parseFloat(document.getElementById('log_price').value);
+  const manualAmount = parseFloat(document.getElementById('log_amount_manual').value);
   const date = document.getElementById('log_date').value;
   
-  if(!fiat) return;
-  const amount = (asset === 'CASH' || type === 'CREDIT_IN' || type === 'ZINS') ? 0 : fiat/price;
+  if(!fiat) return alert("Bitte Betrag eingeben!");
+
+  const isCashOnly = (type === 'CREDIT_IN' || type === 'ZINS' || asset === 'CASH');
   
-  appState.transactions.push({ id: Date.now(), type, asset, date, fiat, price, amount });
+  let amount = 0;
+  let finalPrice = 0;
+
+  if (!isCashOnly) {
+    if (!price) return alert("Bitte Kurs eingeben!");
+    finalPrice = price;
+    amount = manualAmount > 0 ? manualAmount : (fiat / price);
+  }
+  
+  appState.transactions.push({ id: Date.now(), type, asset, date, fiat, price: finalPrice, amount });
   saveState(); renderLog(); runDashboardCalc();
+  
+  // Felder nach dem Speichern leeren
   document.getElementById('log_fiat').value = '';
+  document.getElementById('log_price').value = '';
+  document.getElementById('log_amount_manual').value = '';
 }
 
 function renderLog() {
@@ -233,7 +278,7 @@ function renderLog() {
   appState.transactions.sort((a,b) => new Date(b.date) - new Date(a.date)).forEach(t => {
     const isPlus = t.type === 'ZINS' || t.type === 'SELL' || t.type === 'CREDIT_IN';
     const typeLabel = t.type.replace('CREDIT_IN', 'Kredit').replace('BUY', 'Kauf').replace('SELL', 'Verkauf').replace('ZINS', 'Zins');
-    tbody.innerHTML += `<tr><td>${t.date}</td><td>${typeLabel}</td><td>${t.asset}</td><td style="color:${isPlus?'var(--success)':'var(--danger)'}">${t.fiat}€</td><td>${t.amount ? t.amount.toFixed(5) : '-'}</td><td><button onclick="deleteTx(${t.id})" style="background:none; border:none; color:var(--danger)">✕</button></td></tr>`;
+    tbody.innerHTML += `<tr><td>${t.date}</td><td>${typeLabel}</td><td>${t.asset}</td><td style="color:${isPlus?'var(--success)':'var(--danger)'}">${t.fiat}€</td><td>${t.amount > 0 ? t.amount.toFixed(5) : '-'}</td><td><button onclick="deleteTx(${t.id})" style="background:none; border:none; color:var(--danger)">✕</button></td></tr>`;
   });
 }
 
@@ -275,19 +320,14 @@ function runDashboardCalc() {
   appState.dash_strc_a = parseFloat(document.getElementById('dash_strc_amount').value) || 0;
   saveState();
 
-  // 1. Initialer Kreditbetrag aus dem Log berechnen
-  const initialDebt = appState.transactions
-    .filter(t => t.type === 'CREDIT_IN')
-    .reduce((sum, t) => sum + t.fiat, 0);
+  const initialDebt = appState.transactions.filter(t => t.type === 'CREDIT_IN').reduce((sum, t) => sum + t.fiat, 0);
 
-  // 2. Laufenden Cash-Puffer aus Log berechnen (ohne abgezogene Raten)
   let logCash = 0;
   appState.transactions.forEach(t => {
     if(t.type === 'CREDIT_IN' || t.type === 'SELL' || t.type === 'ZINS') logCash += t.fiat;
     if(t.type === 'BUY') logCash -= t.fiat;
   });
 
-  // 3. Zeit berechnen & Raten abziehen
   const monthsPassed = getMonths(appState.cred_start, new Date());
   const currentDebt = calculateDebtIterative(initialDebt, monthsPassed);
   const totalRatesPaid = monthsPassed * (appState.cred_rate || 0);
