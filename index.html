@@ -73,7 +73,7 @@
           <div class="form-group"><label>STRC Menge</label><input type="number" id="dash_strc_amount" step="0.01" oninput="runDashboardCalc()"></div>
         </div>
         <button class="btn btn-secondary" style="margin-bottom:10px;" onclick="fetchLivePrices()">🔄 Kurse laden</button>
-        <button class="btn" onclick="syncFromLog()">📥 Aus Log laden</button>
+        <button class="btn" onclick="syncFromLog()">📥 Aus Log synchronisieren</button>
       </div>
       <div class="card">
         <h2>Verteilung</h2>
@@ -84,10 +84,10 @@
       <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap:15px;">
         <div class="kpi-box"><label>Restschuld</label><span class="kval neg" id="dash_kpi_debt">0 €</span></div>
         <div class="kpi-box"><label>Portfolio</label><span class="kval pos" id="dash_kpi_assets">0 €</span></div>
-        <div class="kpi-box"><label>TR Cash Puffer</label><span class="kval" id="dash_kpi_cash" style="color:var(--accent-indigo)">0 €</span></div>
+        <div class="kpi-box" style="border-color: var(--accent-indigo);"><label>TR Cash Puffer</label><span class="kval" id="dash_kpi_cash" style="color:var(--accent-indigo)">0 €</span></div>
       </div>
       <div class="kpi-box" style="margin-top:15px; background:var(--success-bg); border-color:var(--success);">
-        <label style="color:var(--success)">Netto Liquidationswert</label>
+        <label style="color:var(--success)">Netto Liquidationswert (Inkl. Puffer)</label>
         <span class="kval pos" id="dash_kpi_net" style="font-size:32px;">0 €</span>
       </div>
     </div>
@@ -99,13 +99,14 @@
       <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
         <div class="form-group"><label>Typ</label>
           <select id="log_type">
+            <option value="CREDIT_IN">Krediteingang (Startkapital)</option>
             <option value="BUY">Kauf (Cash sinkt)</option>
             <option value="ZINS">Zins/Dividende (Cash steigt)</option>
             <option value="SELL">Verkauf (Cash steigt)</option>
           </select>
         </div>
-        <div class="form-group"><label>Asset</label><select id="log_asset"><option value="BTC">BTC</option><option value="STRC">STRC</option><option value="CASH">Nur Cash</option></select></div>
-        <div class="form-group"><label>Betrag (€ Netto)</label><input type="number" id="log_fiat"></div>
+        <div class="form-group"><label>Asset</label><select id="log_asset"><option value="CASH">Nur Cash / Kredit</option><option value="BTC">BTC</option><option value="STRC">STRC</option></select></div>
+        <div class="form-group"><label>Betrag (€)</label><input type="number" id="log_fiat"></div>
         <div class="form-group"><label>Kurs (€)</label><input type="number" id="log_price" value="1"></div>
         <div class="form-group" style="grid-column: span 2;"><label>Datum</label><input type="date" id="log_date"></div>
       </div>
@@ -138,24 +139,23 @@
 
   <div id="tab-settings" class="tab-content">
     <div class="card">
-      <h2>Kredit & Puffer</h2>
-      <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
-        <div class="form-group"><label>Kreditsumme (€)</label><input type="number" id="set_credit_amount"></div>
-        <div class="form-group"><label>Zins Kredit (%)</label><input type="number" id="set_credit_interest" step="0.01"></div>
+      <h2>Kredit Settings</h2>
+      <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 15px;">Der Kreditbetrag wird nun direkt über das Log (Krediteingang) gesteuert.</p>
+      <div style="display:grid; grid-template-columns: 1fr; gap:10px;">
+        <div class="form-group"><label>Zins Kredit p.a. (%)</label><input type="number" id="set_credit_interest" step="0.01"></div>
         <div class="form-group"><label>Monatliche Rate (€)</label><input type="number" id="set_credit_rate"></div>
-        <div class="form-group"><label>Startdatum</label><input type="date" id="set_credit_start"></div>
-        <div class="form-group"><label>TR Zins Puffer (%)</label><input type="number" id="set_cash_interest" value="2.0"></div>
+        <div class="form-group"><label>Datum erste Rate</label><input type="date" id="set_credit_start"></div>
       </div>
       <button class="btn" onclick="saveSettings()">💾 Speichern</button>
     </div>
 
     <div class="card" style="border-color: var(--accent-indigo);">
       <h2>Datensicherung & Sync</h2>
-      <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 15px;">Exportiere deine Daten als Datei, um sie per Threema zu teilen.</p>
+      <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 15px;">Exportiere deine Daten als Datei, um sie z.B. per Threema zu teilen.</p>
       <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
-        <button class="btn btn-secondary" onclick="exportData()">📤 Daten Exportieren</button>
+        <button class="btn btn-secondary" onclick="exportData()">📤 Exportieren</button>
         <label class="btn btn-secondary" style="margin-bottom:0; cursor:pointer;">
-          📥 Daten Importieren
+          📥 Importieren
           <input type="file" id="import_file" style="display:none" onchange="importData(event)">
         </label>
       </div>
@@ -166,8 +166,8 @@
 <script>
 const STORAGE_KEY = 'leverage_tracker_pro_data';
 let appState = {
-  cred_amt: 50000, cred_int: 5.45, cred_rate: 717.40, cred_start: "2026-05-15",
-  cash_int: 2.0, dash_btc_p: 65000, dash_strc_p: 92.0, dash_btc_a: 0, dash_strc_a: 0,
+  cred_int: 5.45, cred_rate: 717.40, cred_start: "2026-05-15",
+  dash_btc_p: 65000, dash_strc_p: 92.0, dash_btc_a: 0, dash_strc_a: 0,
   transactions: []
 };
 
@@ -176,9 +176,11 @@ let donutChartInst = null;
 function init() {
   const saved = localStorage.getItem(STORAGE_KEY);
   if(saved) appState = JSON.parse(saved);
+  
   const d = new Date(); d.setFullYear(d.getFullYear() + 3);
   document.getElementById('sim_exit_date').valueAsDate = d;
   document.getElementById('log_date').valueAsDate = new Date();
+  
   loadFields();
   renderLog();
   runDashboardCalc();
@@ -187,11 +189,9 @@ function init() {
 function saveState() { localStorage.setItem(STORAGE_KEY, JSON.stringify(appState)); }
 
 function loadFields() {
-  document.getElementById('set_credit_amount').value = appState.cred_amt;
   document.getElementById('set_credit_interest').value = appState.cred_int;
   document.getElementById('set_credit_rate').value = appState.cred_rate;
   document.getElementById('set_credit_start').value = appState.cred_start;
-  document.getElementById('set_cash_interest').value = appState.cash_int || 2.0;
   document.getElementById('dash_btc_price').value = appState.dash_btc_p;
   document.getElementById('dash_strc_price').value = appState.dash_strc_p;
   document.getElementById('dash_btc_amount').value = appState.dash_btc_a;
@@ -199,11 +199,9 @@ function loadFields() {
 }
 
 function saveSettings() {
-  appState.cred_amt = parseFloat(document.getElementById('set_credit_amount').value);
-  appState.cred_int = parseFloat(document.getElementById('set_credit_interest').value);
-  appState.cred_rate = parseFloat(document.getElementById('set_credit_rate').value);
+  appState.cred_int = parseFloat(document.getElementById('set_credit_interest').value) || 0;
+  appState.cred_rate = parseFloat(document.getElementById('set_credit_rate').value) || 0;
   appState.cred_start = document.getElementById('set_credit_start').value;
-  appState.cash_int = parseFloat(document.getElementById('set_cash_interest').value);
   saveState(); runDashboardCalc(); alert("Einstellungen gespeichert!");
 }
 
@@ -220,9 +218,11 @@ function addTransaction() {
   const fiat = parseFloat(document.getElementById('log_fiat').value);
   const price = parseFloat(document.getElementById('log_price').value);
   const date = document.getElementById('log_date').value;
-  if(!fiat || !price) return;
   
-  appState.transactions.push({ id: Date.now(), type, asset, date, fiat, price, amount: asset === 'CASH' ? 0 : fiat/price });
+  if(!fiat) return;
+  const amount = (asset === 'CASH' || type === 'CREDIT_IN' || type === 'ZINS') ? 0 : fiat/price;
+  
+  appState.transactions.push({ id: Date.now(), type, asset, date, fiat, price, amount });
   saveState(); renderLog(); runDashboardCalc();
   document.getElementById('log_fiat').value = '';
 }
@@ -231,8 +231,9 @@ function renderLog() {
   const tbody = document.getElementById('log_tbody');
   tbody.innerHTML = '';
   appState.transactions.sort((a,b) => new Date(b.date) - new Date(a.date)).forEach(t => {
-    const isPlus = t.type === 'ZINS' || t.type === 'SELL';
-    tbody.innerHTML += `<tr><td>${t.date}</td><td>${t.type}</td><td>${t.asset}</td><td style="color:${isPlus?'var(--success)':'var(--danger)'}">${t.fiat}€</td><td>${t.amount.toFixed(5)}</td><td><button onclick="deleteTx(${t.id})" style="background:none; border:none; color:var(--danger)">✕</button></td></tr>`;
+    const isPlus = t.type === 'ZINS' || t.type === 'SELL' || t.type === 'CREDIT_IN';
+    const typeLabel = t.type.replace('CREDIT_IN', 'Kredit').replace('BUY', 'Kauf').replace('SELL', 'Verkauf').replace('ZINS', 'Zins');
+    tbody.innerHTML += `<tr><td>${t.date}</td><td>${typeLabel}</td><td>${t.asset}</td><td style="color:${isPlus?'var(--success)':'var(--danger)'}">${t.fiat}€</td><td>${t.amount ? t.amount.toFixed(5) : '-'}</td><td><button onclick="deleteTx(${t.id})" style="background:none; border:none; color:var(--danger)">✕</button></td></tr>`;
   });
 }
 
@@ -244,26 +245,27 @@ function deleteTx(id) {
 function syncFromLog() {
   let btc = 0, strc = 0;
   appState.transactions.forEach(t => {
-    if(t.asset === 'BTC') btc += (t.type === 'BUY' ? t.amount : -t.amount);
-    if(t.asset === 'STRC') strc += (t.type === 'BUY' ? t.amount : -t.amount);
+    if(t.asset === 'BTC' && t.amount > 0) btc += (t.type === 'BUY' ? t.amount : -t.amount);
+    if(t.asset === 'STRC' && t.amount > 0) strc += (t.type === 'BUY' ? t.amount : -t.amount);
   });
-  document.getElementById('dash_btc_amount').value = btc.toFixed(6);
-  document.getElementById('dash_strc_amount').value = strc.toFixed(2);
+  document.getElementById('dash_btc_amount').value = Math.max(0, btc).toFixed(6);
+  document.getElementById('dash_strc_amount').value = Math.max(0, strc).toFixed(2);
   runDashboardCalc();
 }
 
-function getMonths(start, end) {
-  return Math.max(0, (end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth()));
+function getMonths(startStr, endObj) {
+  if(!startStr) return 0;
+  const start = new Date(startStr);
+  const m = (endObj.getFullYear() - start.getFullYear()) * 12 + (endObj.getMonth() - start.getMonth());
+  return Math.max(0, m);
 }
 
-function calculateFinanceAt(months, initialCash) {
-  let debt = appState.cred_amt;
-  let cash = initialCash;
+function calculateDebtIterative(initialDebt, months) {
+  let debt = initialDebt;
   for(let i=0; i < months; i++) {
-    debt = debt * (1 + appState.cred_int/100/12) - appState.cred_rate;
-    cash = cash * (1 + (appState.cash_int || 2.0)/100/12) - appState.cred_rate;
+    debt = debt * (1 + (appState.cred_int || 0)/100/12) - (appState.cred_rate || 0);
   }
-  return { debt: Math.max(0, debt), cash: cash };
+  return Math.max(0, debt);
 }
 
 function runDashboardCalc() {
@@ -273,17 +275,32 @@ function runDashboardCalc() {
   appState.dash_strc_a = parseFloat(document.getElementById('dash_strc_amount').value) || 0;
   saveState();
 
-  const netInvest = appState.transactions.reduce((s, t) => s + (t.type === 'BUY' ? -t.fiat : t.fiat), 0);
-  const currentCashRaw = appState.cred_amt + netInvest;
-  const fin = calculateFinanceAt(getMonths(new Date(appState.cred_start), new Date()), currentCashRaw);
+  // 1. Initialer Kreditbetrag aus dem Log berechnen
+  const initialDebt = appState.transactions
+    .filter(t => t.type === 'CREDIT_IN')
+    .reduce((sum, t) => sum + t.fiat, 0);
+
+  // 2. Laufenden Cash-Puffer aus Log berechnen (ohne abgezogene Raten)
+  let logCash = 0;
+  appState.transactions.forEach(t => {
+    if(t.type === 'CREDIT_IN' || t.type === 'SELL' || t.type === 'ZINS') logCash += t.fiat;
+    if(t.type === 'BUY') logCash -= t.fiat;
+  });
+
+  // 3. Zeit berechnen & Raten abziehen
+  const monthsPassed = getMonths(appState.cred_start, new Date());
+  const currentDebt = calculateDebtIterative(initialDebt, monthsPassed);
+  const totalRatesPaid = monthsPassed * (appState.cred_rate || 0);
+  const currentCash = Math.max(0, logCash - totalRatesPaid);
+  
   const assets = (appState.dash_btc_a * appState.dash_btc_p) + (appState.dash_strc_a * appState.dash_strc_p);
 
-  document.getElementById('dash_kpi_debt').innerText = Math.round(fin.debt).toLocaleString() + " €";
+  document.getElementById('dash_kpi_debt').innerText = Math.round(currentDebt).toLocaleString() + " €";
   document.getElementById('dash_kpi_assets').innerText = Math.round(assets).toLocaleString() + " €";
-  document.getElementById('dash_kpi_cash').innerText = Math.round(fin.cash).toLocaleString() + " €";
-  document.getElementById('dash_kpi_net').innerText = Math.round(assets + fin.cash - fin.debt).toLocaleString() + " €";
+  document.getElementById('dash_kpi_cash').innerText = Math.round(currentCash).toLocaleString() + " €";
+  document.getElementById('dash_kpi_net').innerText = Math.round(assets + currentCash - currentDebt).toLocaleString() + " €";
 
-  updateChart(appState.dash_btc_a * appState.dash_btc_p, appState.dash_strc_a * appState.dash_strc_p, fin.cash);
+  updateChart(appState.dash_btc_a * appState.dash_btc_p, appState.dash_strc_a * appState.dash_strc_p, currentCash);
   runSim();
 }
 
@@ -302,13 +319,23 @@ function runSim() {
   const btcTarget = document.getElementById('sim_btc_slider').value;
   document.getElementById('sim_btc_val').innerText = parseInt(btcTarget).toLocaleString();
 
-  const netInvest = appState.transactions.reduce((s, t) => s + (t.type === 'BUY' ? -t.fiat : t.fiat), 0);
-  const simFin = calculateFinanceAt(getMonths(new Date(appState.cred_start), exitDate), appState.cred_amt + netInvest);
+  const initialDebt = appState.transactions.filter(t => t.type === 'CREDIT_IN').reduce((sum, t) => sum + t.fiat, 0);
+  
+  let logCash = 0;
+  appState.transactions.forEach(t => {
+    if(t.type === 'CREDIT_IN' || t.type === 'SELL' || t.type === 'ZINS') logCash += t.fiat;
+    if(t.type === 'BUY') logCash -= t.fiat;
+  });
+
+  const monthsToExit = getMonths(appState.cred_start, exitDate);
+  const simDebt = calculateDebtIterative(initialDebt, monthsToExit);
+  const simCash = Math.max(0, logCash - (monthsToExit * (appState.cred_rate || 0)));
+
   const futureAssets = (appState.dash_btc_a * btcTarget) + (appState.dash_strc_a * appState.dash_strc_p);
   
-  document.getElementById('sim_debt_at_exit').innerText = Math.round(simFin.debt).toLocaleString() + " €";
-  document.getElementById('sim_cash_at_exit').innerText = Math.round(simFin.cash).toLocaleString() + " €";
-  document.getElementById('sim_result').innerText = Math.round(futureAssets + simFin.cash - simFin.debt).toLocaleString() + " €";
+  document.getElementById('sim_debt_at_exit').innerText = Math.round(simDebt).toLocaleString() + " €";
+  document.getElementById('sim_cash_at_exit').innerText = Math.round(simCash).toLocaleString() + " €";
+  document.getElementById('sim_result').innerText = Math.round(futureAssets + simCash - simDebt).toLocaleString() + " €";
 }
 
 function exportData() {
