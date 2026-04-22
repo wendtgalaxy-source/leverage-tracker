@@ -84,11 +84,11 @@
     <div class="card">
       <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap:15px;">
         <div class="kpi-box"><label>Restschuld</label><span class="kval neg" id="dash_kpi_debt">0 €</span></div>
-        <div class="kpi-box"><label>Portfolio</label><span class="kval pos" id="dash_kpi_assets">0 €</span></div>
+        <div class="kpi-box"><label>Portfolio (Brutto)</label><span class="kval pos" id="dash_kpi_assets">0 €</span></div>
         <div class="kpi-box" style="border-color: var(--accent-indigo);"><label>TR Cash Puffer</label><span class="kval" id="dash_kpi_cash" style="color:var(--accent-indigo)">0 €</span></div>
       </div>
       <div class="kpi-box" style="margin-top:15px; background:var(--success-bg); border-color:var(--success);">
-        <label style="color:var(--success)">Netto Liquidationswert (Inkl. Puffer)</label>
+        <label style="color:var(--success)">Netto Liquidationswert (Inkl. Spread & Puffer)</label>
         <span class="kval pos" id="dash_kpi_net" style="font-size:32px;">0 €</span>
       </div>
     </div>
@@ -139,7 +139,7 @@
         <div class="kpi-box"><label>Puffer (Exit)</label><span class="kval pos" id="sim_cash_at_exit" style="font-size:16px;">0 €</span></div>
       </div>
       <div class="kpi-box" style="background:var(--bg-dark); margin-top: 15px; border-color: var(--success);">
-        <label style="color:var(--success)">Netto nach Tilgung</label>
+        <label style="color:var(--success)">Netto nach Tilgung & Verkaufsspread</label>
         <span class="kval pos" id="sim_result" style="font-size:32px;">0 €</span>
       </div>
     </div>
@@ -155,7 +155,6 @@
       </div>
       <button class="btn" onclick="saveSettings()">💾 Speichern</button>
     </div>
-
     <div class="card" style="border-color: var(--accent-indigo);">
       <h2>Datensicherung & Sync</h2>
       <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
@@ -189,9 +188,7 @@ function init() {
   }
   
   if(appState.transactions) {
-    appState.transactions.forEach(t => {
-      if(!t.type) t.type = 'BUY'; 
-    });
+    appState.transactions.forEach(t => { if(!t.type) t.type = 'BUY'; });
     saveState();
   }
   
@@ -201,7 +198,7 @@ function init() {
   
   loadFields();
   renderLog();
-  updateLogDefaults(); // <--- Hier wird die neue Automatik beim Start aufgerufen
+  updateLogDefaults();
   runDashboardCalc();
 }
 
@@ -231,33 +228,22 @@ function switchTab(id) {
   event.currentTarget.classList.add('active');
 }
 
-// NEUE FUNKTION: Berechnet die cleveren Defaults für das Log-Formular
 function updateLogDefaults() {
-  let totalCredit = 0;
-  let totalInvested = 0;
-
+  let totalCredit = 0; let totalInvested = 0;
   appState.transactions.forEach(t => {
     if (t.type === 'CREDIT_IN') totalCredit += t.fiat;
     if (t.type === 'BUY') totalInvested += t.fiat;
   });
-
   const typeSelect = document.getElementById('log_type');
   const assetSelect = document.getElementById('log_asset');
-
   if (totalCredit === 0) {
-    typeSelect.value = 'CREDIT_IN';
-    assetSelect.value = 'CASH';
+    typeSelect.value = 'CREDIT_IN'; assetSelect.value = 'CASH';
   } else if (totalInvested < (totalCredit * 0.89)) {
-    typeSelect.value = 'BUY';
-    // Springt von CASH weg auf BTC, falls man gerade einen Kredit eingetragen hat
-    if (assetSelect.value === 'CASH') assetSelect.value = 'BTC'; 
+    typeSelect.value = 'BUY'; if (assetSelect.value === 'CASH') assetSelect.value = 'BTC'; 
   } else {
-    typeSelect.value = 'ZINS';
-    // Zinsen fließen meistens über STRC oder Cash
-    if (assetSelect.value === 'BTC') assetSelect.value = 'STRC';
+    typeSelect.value = 'ZINS'; if (assetSelect.value === 'BTC') assetSelect.value = 'STRC';
   }
-
-  toggleLogFields(); // Aktualisiert das Ausgrauen der Felder
+  toggleLogFields();
 }
 
 function toggleLogFields() {
@@ -265,15 +251,11 @@ function toggleLogFields() {
   const asset = document.getElementById('log_asset').value;
   const priceInput = document.getElementById('log_price');
   const amountInput = document.getElementById('log_amount_manual');
-
   if(type === 'CREDIT_IN' || type === 'ZINS' || asset === 'CASH') {
-    priceInput.disabled = true;
-    amountInput.disabled = true;
-    priceInput.value = '';
-    amountInput.value = '';
+    priceInput.disabled = true; amountInput.disabled = true;
+    priceInput.value = ''; amountInput.value = '';
   } else {
-    priceInput.disabled = false;
-    amountInput.disabled = false;
+    priceInput.disabled = false; amountInput.disabled = false;
   }
 }
 
@@ -284,29 +266,17 @@ function addTransaction() {
   const price = parseFloat(document.getElementById('log_price').value);
   const manualAmount = parseFloat(document.getElementById('log_amount_manual').value);
   const date = document.getElementById('log_date').value;
-  
   if(!fiat) return alert("Bitte Betrag eingeben!");
-
   const isCashOnly = (type === 'CREDIT_IN' || type === 'ZINS' || asset === 'CASH');
-  let amount = 0;
-  let finalPrice = 0;
-
+  let amount = 0; let finalPrice = 0;
   if (!isCashOnly) {
     if (!price) return alert("Bitte Kurs eingeben!");
-    finalPrice = price;
-    amount = manualAmount > 0 ? manualAmount : (fiat / price);
+    finalPrice = price; amount = manualAmount > 0 ? manualAmount : (fiat / price);
   }
-  
   appState.transactions.push({ id: Date.now(), type, asset, date, fiat, price: finalPrice, amount });
-  saveState(); 
-  renderLog(); 
-  runDashboardCalc();
-  
-  document.getElementById('log_fiat').value = '';
-  document.getElementById('log_price').value = '';
-  document.getElementById('log_amount_manual').value = '';
-  
-  updateLogDefaults(); // <--- Passt den Default nach dem Speichern direkt an
+  saveState(); renderLog(); runDashboardCalc();
+  document.getElementById('log_fiat').value = ''; document.getElementById('log_price').value = '';
+  document.getElementById('log_amount_manual').value = ''; updateLogDefaults();
 }
 
 function renderLog() {
@@ -322,14 +292,11 @@ function renderLog() {
 
 function deleteTx(id) {
   appState.transactions = appState.transactions.filter(t => t.id !== id);
-  saveState(); 
-  renderLog(); 
-  runDashboardCalc();
-  updateLogDefaults(); // <--- Passt den Default an, falls du z.B. einen Kredit löschst
+  saveState(); renderLog(); runDashboardCalc(); updateLogDefaults();
 }
 
 function syncFromLog() {
-  let btc = 0, strc = 0;
+  let btc = 0; let strc = 0;
   appState.transactions.forEach(t => {
     const type = t.type || 'BUY';
     if(t.asset === 'BTC' && t.amount > 0) btc += (type === 'BUY' ? t.amount : -t.amount);
@@ -349,9 +316,7 @@ function getMonths(startStr, endObj) {
 
 function calculateDebtIterative(initialDebt, months) {
   let debt = initialDebt;
-  for(let i=0; i < months; i++) {
-    debt = debt * (1 + (appState.cred_int || 0)/100/12) - (appState.cred_rate || 0);
-  }
+  for(let i=0; i < months; i++) { debt = debt * (1 + (appState.cred_int || 0)/100/12) - (appState.cred_rate || 0); }
   return Math.max(0, debt);
 }
 
@@ -363,7 +328,6 @@ function runDashboardCalc() {
   saveState();
 
   const initialDebt = appState.transactions.filter(t => t.type === 'CREDIT_IN').reduce((sum, t) => sum + t.fiat, 0);
-
   let logCash = 0;
   appState.transactions.forEach(t => {
     const type = t.type || 'BUY';
@@ -376,14 +340,21 @@ function runDashboardCalc() {
   const totalRatesPaid = monthsPassed * (appState.cred_rate || 0);
   const currentCash = Math.max(0, logCash - totalRatesPaid);
   
-  const assets = (appState.dash_btc_a * appState.dash_btc_p) + (appState.dash_strc_a * appState.dash_strc_p);
+  const btcValue = appState.dash_btc_a * appState.dash_btc_p;
+  const strcValue = appState.dash_strc_a * appState.dash_strc_p;
+  const assets = btcValue + strcValue;
+
+  // NETTO LIQUIDATIONSWERT inkl. Spread: BTC -2%, STRC -1%
+  const btcNet = btcValue * 0.98;
+  const strcNet = strcValue * 0.99;
+  const netLiquidation = btcNet + strcNet + currentCash - currentDebt;
 
   document.getElementById('dash_kpi_debt').innerText = Math.round(currentDebt).toLocaleString() + " €";
   document.getElementById('dash_kpi_assets').innerText = Math.round(assets).toLocaleString() + " €";
   document.getElementById('dash_kpi_cash').innerText = Math.round(currentCash).toLocaleString() + " €";
-  document.getElementById('dash_kpi_net').innerText = Math.round(assets + currentCash - currentDebt).toLocaleString() + " €";
+  document.getElementById('dash_kpi_net').innerText = Math.round(netLiquidation).toLocaleString() + " €";
 
-  updateChart(appState.dash_btc_a * appState.dash_btc_p, appState.dash_strc_a * appState.dash_strc_p, currentCash);
+  updateChart(btcValue, strcValue, currentCash);
   runSim();
 }
 
@@ -401,43 +372,40 @@ function runSim() {
   const exitDate = new Date(document.getElementById('sim_exit_date').value);
   const btcTarget = document.getElementById('sim_btc_slider').value;
   document.getElementById('sim_btc_val').innerText = parseInt(btcTarget).toLocaleString();
-
   const initialDebt = appState.transactions.filter(t => t.type === 'CREDIT_IN').reduce((sum, t) => sum + t.fiat, 0);
-  
   let logCash = 0;
   appState.transactions.forEach(t => {
     const type = t.type || 'BUY';
     if(type === 'CREDIT_IN' || type === 'SELL' || type === 'ZINS') logCash += t.fiat;
     if(type === 'BUY') logCash -= t.fiat;
   });
-
   const monthsToExit = getMonths(appState.cred_start, exitDate);
   const simDebt = calculateDebtIterative(initialDebt, monthsToExit);
   const simCash = Math.max(0, logCash - (monthsToExit * (appState.cred_rate || 0)));
 
-  const futureAssets = (appState.dash_btc_a * btcTarget) + (appState.dash_strc_a * appState.dash_strc_p);
+  const futureBtcValue = appState.dash_btc_a * btcTarget;
+  const futureStrcValue = appState.dash_strc_a * appState.dash_strc_p;
+  
+  // SIMULATOR NETTO: BTC -2%, STRC -1%
+  const futureBtcNet = futureBtcValue * 0.98;
+  const futureStrcNet = futureStrcValue * 0.99;
+  const simResult = futureBtcNet + futureStrcNet + simCash - simDebt;
   
   document.getElementById('sim_debt_at_exit').innerText = Math.round(simDebt).toLocaleString() + " €";
   document.getElementById('sim_cash_at_exit').innerText = Math.round(simCash).toLocaleString() + " €";
-  document.getElementById('sim_result').innerText = Math.round(futureAssets + simCash - simDebt).toLocaleString() + " €";
+  document.getElementById('sim_result').innerText = Math.round(simResult).toLocaleString() + " €";
 }
 
 function exportData() {
   const blob = new Blob([JSON.stringify(appState)], {type: 'application/json'});
   const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `tracker_backup_${new Date().toISOString().slice(0,10)}.json`;
-  a.click();
+  const a = document.createElement('a'); a.href = url;
+  a.download = `tracker_backup_${new Date().toISOString().slice(0,10)}.json`; a.click();
 }
 
 function importData(event) {
   const reader = new FileReader();
-  reader.onload = (e) => {
-    appState = JSON.parse(e.target.result);
-    saveState();
-    location.reload();
-  };
+  reader.onload = (e) => { appState = JSON.parse(e.target.result); saveState(); location.reload(); };
   reader.readAsText(event.target.files[0]);
 }
 
