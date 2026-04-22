@@ -188,7 +188,6 @@ function init() {
     if(old) { appState = JSON.parse(old); }
   }
   
-  // MIGRATION: Repariert alte Log-Einträge, die noch keinen Typ hatten
   if(appState.transactions) {
     appState.transactions.forEach(t => {
       if(!t.type) t.type = 'BUY'; 
@@ -202,7 +201,7 @@ function init() {
   
   loadFields();
   renderLog();
-  toggleLogFields();
+  updateLogDefaults(); // <--- Hier wird die neue Automatik beim Start aufgerufen
   runDashboardCalc();
 }
 
@@ -230,6 +229,35 @@ function switchTab(id) {
   document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
   document.getElementById(id).classList.add('active');
   event.currentTarget.classList.add('active');
+}
+
+// NEUE FUNKTION: Berechnet die cleveren Defaults für das Log-Formular
+function updateLogDefaults() {
+  let totalCredit = 0;
+  let totalInvested = 0;
+
+  appState.transactions.forEach(t => {
+    if (t.type === 'CREDIT_IN') totalCredit += t.fiat;
+    if (t.type === 'BUY') totalInvested += t.fiat;
+  });
+
+  const typeSelect = document.getElementById('log_type');
+  const assetSelect = document.getElementById('log_asset');
+
+  if (totalCredit === 0) {
+    typeSelect.value = 'CREDIT_IN';
+    assetSelect.value = 'CASH';
+  } else if (totalInvested < (totalCredit * 0.89)) {
+    typeSelect.value = 'BUY';
+    // Springt von CASH weg auf BTC, falls man gerade einen Kredit eingetragen hat
+    if (assetSelect.value === 'CASH') assetSelect.value = 'BTC'; 
+  } else {
+    typeSelect.value = 'ZINS';
+    // Zinsen fließen meistens über STRC oder Cash
+    if (assetSelect.value === 'BTC') assetSelect.value = 'STRC';
+  }
+
+  toggleLogFields(); // Aktualisiert das Ausgrauen der Felder
 }
 
 function toggleLogFields() {
@@ -270,18 +298,22 @@ function addTransaction() {
   }
   
   appState.transactions.push({ id: Date.now(), type, asset, date, fiat, price: finalPrice, amount });
-  saveState(); renderLog(); runDashboardCalc();
+  saveState(); 
+  renderLog(); 
+  runDashboardCalc();
   
   document.getElementById('log_fiat').value = '';
   document.getElementById('log_price').value = '';
   document.getElementById('log_amount_manual').value = '';
+  
+  updateLogDefaults(); // <--- Passt den Default nach dem Speichern direkt an
 }
 
 function renderLog() {
   const tbody = document.getElementById('log_tbody');
   tbody.innerHTML = '';
   appState.transactions.sort((a,b) => new Date(b.date) - new Date(a.date)).forEach(t => {
-    const type = t.type || 'BUY'; // Fallback zur Sicherheit
+    const type = t.type || 'BUY'; 
     const isPlus = type === 'ZINS' || type === 'SELL' || type === 'CREDIT_IN';
     const typeLabel = type.replace('CREDIT_IN', 'Kredit').replace('BUY', 'Kauf').replace('SELL', 'Verkauf').replace('ZINS', 'Zins');
     tbody.innerHTML += `<tr><td>${t.date}</td><td>${typeLabel}</td><td>${t.asset}</td><td style="color:${isPlus?'var(--success)':'var(--danger)'}">${t.fiat}€</td><td>${t.amount > 0 ? t.amount.toFixed(5) : '-'}</td><td><button onclick="deleteTx(${t.id})" style="background:none; border:none; color:var(--danger)">✕</button></td></tr>`;
@@ -290,7 +322,10 @@ function renderLog() {
 
 function deleteTx(id) {
   appState.transactions = appState.transactions.filter(t => t.id !== id);
-  saveState(); renderLog(); runDashboardCalc();
+  saveState(); 
+  renderLog(); 
+  runDashboardCalc();
+  updateLogDefaults(); // <--- Passt den Default an, falls du z.B. einen Kredit löschst
 }
 
 function syncFromLog() {
