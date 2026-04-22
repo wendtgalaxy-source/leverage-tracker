@@ -83,11 +83,11 @@
     <div class="card">
       <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap:15px;">
         <div class="kpi-box"><label>Restschuld</label><span class="kval neg" id="dash_kpi_debt">0 €</span></div>
-        <div class="kpi-box"><label>Portfolio</label><span class="kval pos" id="dash_kpi_assets">0 €</span></div>
+        <div class="kpi-box"><label>Investiertes Portfolio</label><span class="kval pos" id="dash_kpi_assets">0 €</span></div>
         <div class="kpi-box"><label>Noch investieren</label><span class="kval" id="dash_kpi_to_invest" style="color:var(--accent-indigo)">0 €</span></div>
       </div>
       <div class="kpi-box" style="margin-top:15px; background:var(--success-bg); border-color:var(--success);">
-        <label style="color:var(--success)">Netto heute</label>
+        <label style="color:var(--success)">Netto Liquidationswert (Inkl. Cash)</label>
         <span class="kval pos" id="dash_kpi_net" style="font-size:32px;">0 €</span>
       </div>
     </div>
@@ -128,7 +128,7 @@
       </div>
 
       <div class="kpi-box" style="background:var(--bg-dark); margin-top: 15px; border-color: var(--success);">
-        <label style="color:var(--success)">Netto-Cash nach Volltilgung</label>
+        <label style="color:var(--success)">Netto-Cash nach Volltilgung (Inkl. Cash-Rest)</label>
         <span class="kval pos" id="sim_result" style="font-size:32px;">0 €</span>
       </div>
     </div>
@@ -159,12 +159,10 @@ let donutChartInst = null;
 function init() {
   const saved = localStorage.getItem(STORAGE_KEY);
   if(saved) appState = JSON.parse(saved);
-  
-  // Exit Datum Standard: Heute + 3 Jahre
-  const d = new Date();
-  d.setFullYear(d.getFullYear() + 3);
+  const old = localStorage.getItem('leverage_app_v2.2');
+  if(old && !saved) { appState = JSON.parse(old); saveState(); }
+  const d = new Date(); d.setFullYear(d.getFullYear() + 3);
   document.getElementById('sim_exit_date').valueAsDate = d;
-  
   document.getElementById('log_date').valueAsDate = new Date();
   loadFields();
   renderLog();
@@ -257,12 +255,13 @@ function runDashboardCalc() {
   const currentStatus = calculateDebtAt(monthsPassed);
   
   const invested = appState.transactions.reduce((s, t) => s + t.fiat, 0);
+  const toInvest = Math.max(0, appState.cred_amt - invested);
   const assets = (appState.dash_btc_a * appState.dash_btc_p) + (appState.dash_strc_a * appState.dash_strc_p);
 
   document.getElementById('dash_kpi_debt').innerText = Math.round(currentStatus.debt).toLocaleString() + " €";
   document.getElementById('dash_kpi_assets').innerText = Math.round(assets).toLocaleString() + " €";
-  document.getElementById('dash_kpi_to_invest').innerText = Math.round(appState.cred_amt - invested).toLocaleString() + " €";
-  document.getElementById('dash_kpi_net').innerText = Math.round(assets - currentStatus.debt).toLocaleString() + " €";
+  document.getElementById('dash_kpi_to_invest').innerText = Math.round(toInvest).toLocaleString() + " €";
+  document.getElementById('dash_kpi_net').innerText = Math.round(assets + toInvest - currentStatus.debt).toLocaleString() + " €";
 
   updateChart(appState.dash_btc_a * appState.dash_btc_p, appState.dash_strc_a * appState.dash_strc_p);
   runSim();
@@ -286,11 +285,13 @@ function runSim() {
   const monthsToExit = getMonths(new Date(appState.cred_start), exitDate);
   const simStatus = calculateDebtAt(monthsToExit);
 
+  const invested = appState.transactions.reduce((s, t) => s + t.fiat, 0);
+  const toInvest = Math.max(0, appState.cred_amt - invested);
   const futureAssets = (appState.dash_btc_a * btcTarget) + (appState.dash_strc_a * appState.dash_strc_p);
   
   document.getElementById('sim_debt_at_exit').innerText = Math.round(simStatus.debt).toLocaleString() + " €";
   document.getElementById('sim_interest_paid').innerText = Math.round(simStatus.interest).toLocaleString() + " €";
-  document.getElementById('sim_result').innerText = Math.round(futureAssets - simStatus.debt).toLocaleString() + " €";
+  document.getElementById('sim_result').innerText = Math.round(futureAssets + toInvest - simStatus.debt).toLocaleString() + " €";
 }
 
 async function fetchLivePrices() {
