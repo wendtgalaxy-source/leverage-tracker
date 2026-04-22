@@ -1,78 +1,81 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Pro Leverage Tracker v2.2</title>
-<link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/2535/2535071.png">
-<link rel="icon" type="image/png" href="https://cdn-icons-png.flaticon.com/512/2535/2535071.png">
-<link rel="manifest" href="manifest.json">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="theme-color" content="#0f172a">
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<style>
-  :root {
-    --bg-dark: #0f172a; --bg-card: #1e293b; --text-main: #f8fafc; --text-muted: #94a3b8;
-    --accent: #3b82f6; --accent-hover: #2563eb; --accent-indigo: #6366f1;
-    --success: #10b981; --success-bg: rgba(16, 185, 129, 0.1);
-    --danger: #ef4444; --danger-bg: rgba(239, 68, 68, 0.1);
-    --border: #334155; --radius: 12px;
-  }
-  * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
-  body { background-color: var(--bg-dark); color: var(--text-main); line-height: 1.5; padding: 20px; }
-  .container { max-width: 1100px; margin: 0 auto; }
-  header { margin-bottom: 30px; text-align: center; }
-  h1 { font-size: 28px; font-weight: 700; background: linear-gradient(to right, var(--accent), var(--accent-indigo)); -webkit-background-clip: text; color: transparent; }
-  p.subtitle { color: var(--text-muted); font-size: 14px; margin-top: 5px; }
-  .tabs { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 1px solid var(--border); padding-bottom: 10px; overflow-x: auto; scrollbar-width: none; }
-  .tab-btn { background: transparent; color: var(--text-muted); border: none; padding: 10px 16px; font-size: 15px; font-weight: 600; cursor: pointer; border-radius: var(--radius) var(--radius) 0 0; transition: all 0.2s; white-space: nowrap; }
-  .tab-btn:hover { color: var(--text-main); }
-  .tab-btn.active { color: var(--text-main); background: var(--bg-card); position: relative; }
-  .tab-btn.active::after { content: ''; position: absolute; bottom: -11px; left: 0; width: 100%; height: 2px; background: var(--accent-indigo); }
-  .tab-content { display: none; animation: fadeIn 0.3s ease-in-out; }
-  .tab-content.active { display: block; }
-  @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
-  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-bottom: 20px; }
-  .grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; }
-  .grid-4 { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 15px; }
-  .card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; }
-  .card h2 { font-size: 16px; font-weight: 600; margin-bottom: 15px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid var(--border); padding-bottom: 8px;}
-  .form-group { margin-bottom: 15px; }
-  label { display: block; font-size: 12px; color: var(--text-muted); font-weight: 600; margin-bottom: 6px; text-transform: uppercase; }
-  input, select { width: 100%; background: var(--bg-dark); border: 1px solid var(--border); color: var(--text-main); padding: 10px 12px; border-radius: 8px; font-size: 15px; font-weight: 600; transition: border 0.2s; }
-  .btn { display: inline-block; background: var(--accent); color: white; border: none; padding: 10px 18px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: background 0.2s; font-size: 14px; text-align: center; }
-  .btn:hover { background: var(--accent-hover); }
-  .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text-main); }
-  .btn-danger { background: var(--danger); }
-  .kpi-box { background: rgba(0,0,0,0.2); border: 1px solid var(--border); border-radius: 10px; padding: 15px; text-align: center; display: flex; flex-direction: column; justify-content: center; }
-  .klabel { font-size: 11px; color: var(--text-muted); font-weight: 700; text-transform: uppercase; margin-bottom: 5px; }
-  .kval { font-size: 20px; font-weight: 800; display: block; }
-  .pos { color: var(--success) !important; } .neg { color: var(--danger) !important; }
-  .net-highlight { border-color: var(--success); background: var(--success-bg); }
-  table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 14px; }
-  th, td { text-align: left; padding: 12px 10px; border-bottom: 1px solid var(--border); }
-  th { color: var(--text-muted); font-size: 11px; text-transform: uppercase; }
-  .tag { padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; }
-  .tag-btc { background: #f59e0b22; color: #fbbf24; }
-  .tag-strc { background: #6366f122; color: #a5b4fc; }
-  .chart-container { position: relative; height: 260px; width: 100%; }
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pro Leverage Tracker</title>
+  
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#0f172a">
+  
+  <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/2535/2535071.png">
+  <link rel="icon" type="image/png" href="https://cdn-icons-png.flaticon.com/512/2535/2535071.png">
+  
+  <link rel="manifest" href="manifest.json">
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    :root {
+      --bg-dark: #0f172a; --bg-card: #1e293b; --text-main: #f8fafc; --text-muted: #94a3b8;
+      --accent: #3b82f6; --accent-hover: #2563eb; --accent-indigo: #6366f1;
+      --success: #10b981; --success-bg: rgba(16, 185, 129, 0.1);
+      --danger: #ef4444; --danger-bg: rgba(239, 68, 68, 0.1);
+      --border: #334155; --radius: 12px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
+    body { background-color: var(--bg-dark); color: var(--text-main); line-height: 1.5; padding: 20px; }
+    .container { max-width: 1100px; margin: 0 auto; }
+    header { margin-bottom: 30px; text-align: center; }
+    h1 { font-size: 28px; font-weight: 700; background: linear-gradient(to right, var(--accent), var(--accent-indigo)); -webkit-background-clip: text; color: transparent; }
+    p.subtitle { color: var(--text-muted); font-size: 14px; margin-top: 5px; }
+    .tabs { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 1px solid var(--border); padding-bottom: 10px; overflow-x: auto; scrollbar-width: none; }
+    .tab-btn { background: transparent; color: var(--text-muted); border: none; padding: 10px 16px; font-size: 15px; font-weight: 600; cursor: pointer; border-radius: var(--radius) var(--radius) 0 0; transition: all 0.2s; white-space: nowrap; }
+    .tab-btn:hover { color: var(--text-main); }
+    .tab-btn.active { color: var(--text-main); background: var(--bg-card); position: relative; }
+    .tab-btn.active::after { content: ''; position: absolute; bottom: -11px; left: 0; width: 100%; height: 2px; background: var(--accent-indigo); }
+    .tab-content { display: none; animation: fadeIn 0.3s ease-in-out; }
+    .tab-content.active { display: block; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-bottom: 20px; }
+    .grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; }
+    .grid-4 { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 15px; }
+    .card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; }
+    .card h2 { font-size: 16px; font-weight: 600; margin-bottom: 15px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid var(--border); padding-bottom: 8px;}
+    .form-group { margin-bottom: 15px; }
+    label { display: block; font-size: 12px; color: var(--text-muted); font-weight: 600; margin-bottom: 6px; text-transform: uppercase; }
+    input, select { width: 100%; background: var(--bg-dark); border: 1px solid var(--border); color: var(--text-main); padding: 10px 12px; border-radius: 8px; font-size: 15px; font-weight: 600; transition: border 0.2s; }
+    .btn { display: inline-block; background: var(--accent); color: white; border: none; padding: 10px 18px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: background 0.2s; font-size: 14px; text-align: center; width: 100%; }
+    .btn:hover { background: var(--accent-hover); }
+    .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text-main); }
+    .btn-danger { background: var(--danger); width: auto; }
+    .btn-success { background: var(--success); }
+    .kpi-box { background: rgba(0,0,0,0.2); border: 1px solid var(--border); border-radius: 10px; padding: 15px; text-align: center; display: flex; flex-direction: column; justify-content: center; }
+    .klabel { font-size: 11px; color: var(--text-muted); font-weight: 700; text-transform: uppercase; margin-bottom: 5px; }
+    .kval { font-size: 20px; font-weight: 800; display: block; }
+    .pos { color: var(--success) !important; } .neg { color: var(--danger) !important; }
+    .net-highlight { border-color: var(--success); background: var(--success-bg); }
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 14px; }
+    th, td { text-align: left; padding: 12px 10px; border-bottom: 1px solid var(--border); }
+    th { color: var(--text-muted); font-size: 11px; text-transform: uppercase; }
+    .tag { padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; }
+    .tag-btc { background: #f59e0b22; color: #fbbf24; }
+    .tag-strc { background: #6366f122; color: #a5b4fc; }
+    .chart-container { position: relative; height: 260px; width: 100%; }
+  </style>
 </head>
 <body>
 
 <div class="container">
   <header>
     <h1>Pro Leverage Tracker</h1>
-    <p class="subtitle">Investment Strategy & Asset Log v2.2</p>
+    <p class="subtitle">Investment Strategy & Asset Log</p>
   </header>
 
   <div class="tabs">
     <button class="tab-btn active" onclick="switchTab('tab-dashboard')">📊 Dashboard</button>
     <button class="tab-btn" onclick="switchTab('tab-log')">📝 Portfolio-Log</button>
-    <button class="tab-btn" onclick="switchTab('tab-simulator')">🔮 Simulator</button>
-    <button class="tab-btn" onclick="switchTab('tab-planner')">🛒 Planer</button>
     <button class="tab-btn" onclick="switchTab('tab-settings')">⚙️ Settings</button>
   </div>
 
@@ -81,7 +84,7 @@
       <div class="card">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
           <h2>Live Bestände</h2>
-          <button class="btn btn-outline" style="padding:4px 8px; font-size:11px;" onclick="fetchLivePrices()">🔄 Kurse laden</button>
+          <button class="btn btn-outline" style="padding:4px 8px; font-size:11px; width:auto;" onclick="fetchLivePrices()">🔄 Kurse laden</button>
         </div>
         <div class="grid-2">
           <div class="form-group"><label>BTC Kurs (€)</label><input type="number" id="dash_btc_price" oninput="runDashboardCalc()"></div>
@@ -89,8 +92,8 @@
           <div class="form-group"><label>BTC Bestand</label><input type="number" id="dash_btc_amount" step="0.00001" oninput="runDashboardCalc()"></div>
           <div class="form-group"><label>STRC Bestand</label><input type="number" id="dash_strc_amount" step="0.01" oninput="runDashboardCalc()"></div>
         </div>
-        <div class="form-group"><label>TR Cash Puffer (€)</label><input type="number" id="dash_cash" oninput="runDashboardCalc()"></div>
-        <button class="btn btn-outline btn-block" style="font-size:11px;" onclick="syncFromLog()">📥 Bestände aus Portfolio-Log laden</button>
+        <div class="form-group"><label>Cash Puffer (€)</label><input type="number" id="dash_cash" oninput="runDashboardCalc()"></div>
+        <button class="btn btn-outline" style="font-size:11px;" onclick="syncFromLog()">📥 Bestände aus Log laden</button>
       </div>
       <div class="card">
         <h2>Verteilung</h2>
@@ -118,18 +121,17 @@
         <div class="grid-2">
           <div class="form-group"><label>Asset</label><select id="log_asset"><option value="BTC">Bitcoin</option><option value="STRC">STRC (A41EXE)</option></select></div>
           <div class="form-group"><label>Datum</label><input type="date" id="log_date"></div>
-          <div class="form-group"><label>Investiertes Kapital (€)</label><input type="number" id="log_fiat" placeholder="Gesamtsumme inkl. Gebühr"></div>
-          <div class="form-group"><label>Kurs bei Kauf (€)</label><input type="number" id="log_price" placeholder="Preis pro Einheit"></div>
-          <div class="form-group" style="grid-column: 1 / -1;"><label>Genaue Menge / Anteile (Optional)</label><input type="number" id="log_amount_manual" step="0.00000001" placeholder="Leer lassen für autom. Gebühr"></div>
+          <div class="form-group"><label>Invest (€)</label><input type="number" id="log_fiat"></div>
+          <div class="form-group"><label>Kurs (€)</label><input type="number" id="log_price"></div>
+          <div class="form-group" style="grid-column: 1 / -1;"><label>Menge (Optional)</label><input type="number" id="log_amount_manual" step="0.00000001"></div>
         </div>
-        <p style="font-size:10px; color:var(--text-muted); margin-bottom:10px;">Hinweis: Wenn "Genaue Menge" leer bleibt, werden autom. die % Gebühren aus den Settings abgezogen.</p>
-        <button class="btn btn-block btn-success" onclick="addTransaction()">➕ Transaktion hinzufügen</button>
+        <button class="btn btn-success" onclick="addTransaction()">➕ Hinzufügen</button>
       </div>
       <div class="card" style="flex:2">
-        <h2>Transaktions-Historie</h2>
+        <h2>Historie</h2>
         <div style="overflow-x:auto">
           <table id="log_table">
-            <thead><tr><th>Datum</th><th>Asset</th><th>Invest</th><th>Kurs</th><th>Menge</th><th>Effektiver Kurs</th><th></th></tr></thead>
+            <thead><tr><th>Datum</th><th>Asset</th><th>Invest</th><th>Kurs</th><th>Menge</th><th></th></tr></thead>
             <tbody id="log_tbody"></tbody>
           </table>
         </div>
@@ -137,18 +139,15 @@
     </div>
   </div>
 
-  <div id="tab-simulator" class="tab-content">...</div>
-  <div id="tab-planner" class="tab-content">...</div>
   <div id="tab-settings" class="tab-content">
     <div class="card">
-      <h2>Basis-Daten</h2>
+      <h2>Basis-Konfiguration</h2>
       <div class="grid-2">
-        <div class="form-group"><label>Kredit (€)</label><input type="number" id="set_credit_amount" value="50000"></div>
+        <div class="form-group"><label>Kredit Summe (€)</label><input type="number" id="set_credit_amount" value="50000"></div>
         <div class="form-group"><label>Zins (%)</label><input type="number" id="set_credit_interest" value="5.45"></div>
-        <div class="form-group"><label>Rate (€)</label><input type="number" id="set_credit_rate" value="717.40"></div>
+        <div class="form-group"><label>Monatl. Rate (€)</label><input type="number" id="set_credit_rate" value="717.40"></div>
         <div class="form-group"><label>Start Datum</label><input type="date" id="set_credit_start" value="2026-05-15"></div>
-        <div class="form-group"><label>TR Gebühr (%)</label><input type="number" id="set_fee_tr" value="2.0"></div>
-        <div class="form-group"><label>Freibetrag p.a.</label><input type="number" id="set_tax_free" value="2000"></div>
+        <div class="form-group"><label>Kauf-Gebühr (%)</label><input type="number" id="set_fee_tr" value="2.0"></div>
       </div>
       <button class="btn btn-success" onclick="saveSettings()">💾 Einstellungen Speichern</button>
     </div>
@@ -157,9 +156,12 @@
 </div>
 
 <script>
+// WICHTIG: Dieser Key darf für Updates nicht geändert werden!
+const STORAGE_KEY = 'leverage_tracker_pro_data';
+
 let appState = {
   cred_amt: 50000, cred_int: 5.45, cred_rate: 717.40, cred_start: "2026-05-15",
-  fee_tr: 2.0, tax_free: 2000,
+  fee_tr: 2.0,
   dash_btc_p: 62000, dash_strc_p: 85.0, dash_btc_a: 0, dash_strc_a: 0, dash_cash: 5000,
   transactions: []
 };
@@ -167,15 +169,24 @@ let appState = {
 let donutChartInst = null;
 
 function init() {
-  const saved = localStorage.getItem('leverage_app_v2.2');
+  // MIGRATION von alter Version (falls vorhanden)
+  const oldData = localStorage.getItem('leverage_app_v2.2');
+  if (oldData && !localStorage.getItem(STORAGE_KEY)) {
+    localStorage.setItem(STORAGE_KEY, oldData);
+  }
+
+  const saved = localStorage.getItem(STORAGE_KEY);
   if(saved) appState = JSON.parse(saved);
+  
   document.getElementById('log_date').valueAsDate = new Date();
   populateInputs();
   renderLog();
   runDashboardCalc();
 }
 
-function saveState() { localStorage.setItem('leverage_app_v2.2', JSON.stringify(appState)); }
+function saveState() { 
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(appState)); 
+}
 
 function populateInputs() {
   setV('set_credit_amount', appState.cred_amt);
@@ -183,7 +194,6 @@ function populateInputs() {
   setV('set_credit_rate', appState.cred_rate);
   document.getElementById('set_credit_start').value = appState.cred_start;
   setV('set_fee_tr', appState.fee_tr);
-  setV('set_tax_free', appState.tax_free);
   setV('dash_btc_price', appState.dash_btc_p);
   setV('dash_strc_price', appState.dash_strc_p);
   setV('dash_btc_amount', appState.dash_btc_a);
@@ -197,7 +207,6 @@ function saveSettings() {
   appState.cred_rate = getV('set_credit_rate');
   appState.cred_start = document.getElementById('set_credit_start').value;
   appState.fee_tr = getV('set_fee_tr');
-  appState.tax_free = getV('set_tax_free');
   saveState(); alert("Gespeichert!"); runDashboardCalc();
 }
 
@@ -212,7 +221,6 @@ function getV(id) { return parseFloat(document.getElementById(id).value) || 0; }
 function setV(id, val) { document.getElementById(id).value = val; }
 function fmtC(v) { return v.toLocaleString('de-DE', {style:'currency', currency:'EUR', maximumFractionDigits:0}); }
 
-/* PORTFOLIO LOG LOGIC v2.2 */
 function addTransaction() {
   const asset = document.getElementById('log_asset').value;
   const fiat = getV('log_fiat');
@@ -220,34 +228,26 @@ function addTransaction() {
   const manualAmount = getV('log_amount_manual');
   const date = document.getElementById('log_date').value;
   
-  if(!fiat || !price) return alert("Bitte Betrag und Kurs eingeben");
+  if(!fiat || !price) return alert("Daten unvollständig");
 
-  let amount;
-  if(manualAmount > 0) {
-    amount = manualAmount; // Nimm exakte Menge vom User
-  } else {
-    // Automatik mit Gebühr
-    const netFiat = fiat * (1 - (appState.fee_tr/100));
-    amount = netFiat / price;
-  }
+  let amount = manualAmount > 0 ? manualAmount : (fiat * (1 - (appState.fee_tr/100))) / price;
 
   appState.transactions.push({ id: Date.now(), asset, date, fiat, price, amount });
   saveState(); renderLog();
-  
-  // Felder leeren
   setV('log_fiat', ''); setV('log_price', ''); setV('log_amount_manual', '');
 }
 
 function deleteTx(id) {
-  appState.transactions = appState.transactions.filter(t => t.id !== id);
-  saveState(); renderLog();
+  if(confirm("Löschen?")) {
+    appState.transactions = appState.transactions.filter(t => t.id !== id);
+    saveState(); renderLog();
+  }
 }
 
 function renderLog() {
   const tbody = document.getElementById('log_tbody');
   tbody.innerHTML = '';
   appState.transactions.sort((a,b) => new Date(b.date) - new Date(a.date)).forEach(t => {
-    const effectivePrice = t.fiat / t.amount;
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td>${t.date}</td>
@@ -255,7 +255,6 @@ function renderLog() {
       <td>${fmtC(t.fiat)}</td>
       <td>${fmtC(t.price)}</td>
       <td>${t.amount.toFixed(t.asset==='BTC'?5:2)}</td>
-      <td style="color:var(--text-muted)">${fmtC(effectivePrice)}</td>
       <td><button class="btn btn-danger" style="padding:2px 6px" onclick="deleteTx(${t.id})">✕</button></td>
     `;
     tbody.appendChild(tr);
@@ -268,8 +267,6 @@ function syncFromLog() {
     if(t.asset === 'BTC') { btcTotal += t.amount; btcFiat += t.fiat; }
     else { strcTotal += t.amount; }
   });
-  appState.dash_btc_a = btcTotal;
-  appState.dash_strc_a = strcTotal;
   setV('dash_btc_amount', btcTotal.toFixed(6));
   setV('dash_strc_amount', strcTotal.toFixed(2));
   const avgBtc = btcTotal > 0 ? (btcFiat / btcTotal) : 0;
