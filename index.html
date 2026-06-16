@@ -19,8 +19,8 @@
     :root {
       --bg-dark: #0f172a; --bg-card: #1e293b; --text-main: #f8fafc; --text-muted: #94a3b8;
       --accent: #3b82f6; --accent-hover: #2563eb; --accent-indigo: #6366f1;
-      --success: #10b981; --success-bg: rgba(16, 185, 129, 0.1);
-      --danger: #ef4444; --danger-bg: rgba(239, 68, 68, 0.1);
+      --success: #10b981; --success-bg: rgba(16, 185, 129, 0.15);
+      --danger: #ef4444; --danger-bg: rgba(239, 68, 68, 0.15);
       --border: #334155; --radius: 12px;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
@@ -35,7 +35,7 @@
     .tab-content.active { display: block; }
     @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
     .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-bottom: 20px; }
-    .card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; margin-bottom: 20px; }
+    .card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; margin-bottom: 20px; transition: all 0.3s ease;}
     .card h2 { font-size: 14px; font-weight: 700; margin-bottom: 15px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; }
     .form-group { margin-bottom: 15px; }
     label { display: block; font-size: 11px; color: var(--text-muted); font-weight: 700; margin-bottom: 5px; text-transform: uppercase; }
@@ -43,9 +43,9 @@
     input:disabled { opacity: 0.3; cursor: not-allowed; }
     .btn { background: var(--accent); color: white; border: none; padding: 12px; border-radius: 8px; font-weight: 700; cursor: pointer; width: 100%; text-align: center; display: inline-block; text-decoration: none; }
     .btn-secondary { background: var(--bg-dark); border: 1px solid var(--border); }
-    .kpi-box { background: rgba(0,0,0,0.2); border: 1px solid var(--border); border-radius: 10px; padding: 15px; text-align: center; }
-    .kval { font-size: 22px; font-weight: 800; display: block; }
-    .pos { color: var(--success); } .neg { color: var(--danger); }
+    .kpi-box { background: rgba(0,0,0,0.2); border: 1px solid var(--border); border-radius: 10px; padding: 15px; text-align: center; display: flex; flex-direction: column; justify-content: center;}
+    .kval { font-size: 20px; font-weight: 800; display: block; margin-top: 4px; }
+    .pos { color: var(--success) !important; } .neg { color: var(--danger) !important; }
     table { width: 100%; border-collapse: collapse; font-size: 13px; }
     th, td { padding: 12px; text-align: left; border-bottom: 1px solid var(--border); }
     .slider { width: 100%; margin: 10px 0; accent-color: var(--accent-indigo); }
@@ -64,37 +64,62 @@
   </div>
 
   <div id="tab-dashboard" class="tab-content active">
-    <div class="grid">
-      <div class="card">
-        <h2>Live Bestände</h2>
-        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
-          <div class="form-group"><label>BTC Kurs (€)</label><input type="number" id="dash_btc_price" oninput="runDashboardCalc()"></div>
-          <div class="form-group"><label>STRC Kurs (€)</label><input type="number" id="dash_strc_price" step="0.01" oninput="runDashboardCalc()"></div>
-          <div class="form-group"><label>BTC Menge</label><input type="number" id="dash_btc_amount" step="0.00001" oninput="runDashboardCalc()"></div>
-          <div class="form-group"><label>STRC Menge</label><input type="number" id="dash_strc_amount" step="0.01" oninput="runDashboardCalc()"></div>
-        </div>
-        <button class="btn btn-secondary" style="margin-bottom:10px;" onclick="fetchLivePrices()">🔄 Kurse laden</button>
-        <button class="btn" onclick="syncFromLog()">📥 Aus Log synchronisieren</button>
-      </div>
-      <div class="card">
-        <h2>Verteilung</h2>
-        <div style="height: 200px;"><canvas id="donutChart"></canvas></div>
-      </div>
-    </div>
     
     <div class="card">
-      <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap:15px;">
-        <div class="kpi-box"><label>Restschuld</label><span class="kval neg" id="dash_kpi_debt">0 €</span></div>
-        <div class="kpi-box"><label>Portfolio (Brutto)</label><span class="kval pos" id="dash_kpi_assets">0 €</span></div>
-        <div class="kpi-box" style="border-color: var(--accent-indigo);"><label>TR Cash Puffer</label><span class="kval" id="dash_kpi_cash" style="color:var(--accent-indigo)">0 €</span></div>
-        <div class="kpi-box"><label>Gezahlte Zinsen</label><span class="kval neg" id="dash_kpi_interest_paid" style="font-size:18px;">0 €</span></div>
-        <div class="kpi-box"><label>Erhaltene Zinsen</label><span class="kval pos" id="dash_kpi_income_received" style="font-size:18px;">0 €</span></div>
+      <h2>Live Bestände</h2>
+      <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+        <div class="form-group"><label>BTC Kurs (€)</label><input type="number" id="dash_btc_price" oninput="runDashboardCalc()"></div>
+        <div class="form-group"><label>STRC Kurs (€)</label><input type="number" id="dash_strc_price" step="0.01" oninput="runDashboardCalc()"></div>
+        <div class="form-group"><label>BTC Menge</label><input type="number" id="dash_btc_amount" step="0.00001" oninput="runDashboardCalc()"></div>
+        <div class="form-group"><label>STRC Menge</label><input type="number" id="dash_strc_amount" step="0.01" oninput="runDashboardCalc()"></div>
       </div>
-      <div class="kpi-box" style="margin-top:15px; background:var(--success-bg); border-color:var(--success);">
-        <label style="color:var(--success)">Netto Liquidationswert (Inkl. Spread & Puffer)</label>
-        <span class="kval pos" id="dash_kpi_net" style="font-size:32px;">0 €</span>
+      <div style="display:flex; gap:10px; margin-bottom:5px;">
+        <button class="btn btn-secondary" onclick="fetchLivePrices()">🔄 Kurse laden</button>
+        <button class="btn" onclick="syncFromLog()">📥 Aus Log syncen</button>
       </div>
     </div>
+
+    <div class="grid">
+      <div class="card">
+        <h2>Verteilung & Bilanz</h2>
+        <div style="height: 180px;"><canvas id="donutChart"></canvas></div>
+        <div style="height: 60px; margin-top: 20px;"><canvas id="barChart"></canvas></div>
+      </div>
+
+      <div>
+        <div class="card" style="margin-bottom: 15px;">
+          <h2>Vermögen & Schulden</h2>
+          <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+            <div class="kpi-box"><label>🏦 Restschuld</label><span class="kval neg" id="dash_kpi_debt">0 €</span></div>
+            <div class="kpi-box"><label>📈 Portfolio (Brutto)</label><span class="kval pos" id="dash_kpi_assets">0 €</span></div>
+            <div class="kpi-box"><label>💶 TR Cash Puffer</label><span class="kval" id="dash_kpi_cash" style="color:var(--accent-indigo)">0 €</span></div>
+            <div class="kpi-box"><label>📊 LTV (Risiko)</label><span class="kval" id="dash_kpi_ltv">0 %</span></div>
+          </div>
+        </div>
+
+        <div class="card" style="margin-bottom: 20px;">
+          <h2>Performance & Zinsen</h2>
+          <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+            <div class="kpi-box"><label>💸 Gezahlte Zinsen</label><span class="kval neg" id="dash_kpi_interest_paid">0 €</span></div>
+            <div class="kpi-box"><label>🤑 Erhaltene Zinsen</label><span class="kval pos" id="dash_kpi_income_received">0 €</span></div>
+            <div class="kpi-box"><label>⚖️ Zins-Saldo</label><span class="kval" id="dash_kpi_zins_saldo">0 €</span></div>
+            <div class="kpi-box"><label>🛒 Avg. Buy BTC</label><span class="kval" id="dash_kpi_avg_btc">0 €</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" id="net_card" style="border-width: 2px;">
+      <div class="kpi-box" style="border:none; background:transparent; padding: 5px 15px;">
+        <label id="net_label">Netto Liquidationswert (Inkl. Spreads & Puffer)</label>
+        <span class="kval" id="dash_kpi_net" style="font-size:36px; margin-bottom: 15px;">0 €</span>
+      </div>
+      <div style="text-align: center; border-top: 1px solid var(--border); padding-top: 15px;">
+        <label>🎯 Break-Even BTC-Kurs (für 0€ Netto)</label>
+        <span id="dash_kpi_breakeven" style="font-weight: 800; font-size: 20px; display:block; margin-top:5px;">0 €</span>
+      </div>
+    </div>
+
   </div>
 
   <div id="tab-log" class="tab-content">
@@ -184,6 +209,7 @@ let appState = {
 };
 
 let donutChartInst = null;
+let barChartInst = null;
 
 function init() {
   const saved = localStorage.getItem(STORAGE_KEY);
@@ -342,12 +368,20 @@ function runDashboardCalc() {
   const initialDebt = appState.transactions.filter(t => t.type === 'CREDIT_IN').reduce((sum, t) => sum + t.fiat, 0);
   let logCash = 0;
   let totalIncome = 0;
+  let btcInvested = 0;
+  let btcBoughtAmount = 0;
   
   appState.transactions.forEach(t => {
     const type = t.type || 'BUY';
     if(type === 'CREDIT_IN' || type === 'SELL' || type === 'ZINS') logCash += t.fiat;
     if(type === 'BUY') logCash -= t.fiat;
     if(type === 'ZINS') totalIncome += t.fiat; 
+    
+    // Für Average Buy
+    if(t.asset === 'BTC' && type === 'BUY') {
+        btcInvested += t.fiat;
+        btcBoughtAmount += t.amount;
+    }
   });
 
   const monthsPassed = getMonths(appState.cred_start, new Date());
@@ -358,30 +392,99 @@ function runDashboardCalc() {
   
   const btcValue = appState.dash_btc_a * appState.dash_btc_p;
   const strcValue = appState.dash_strc_a * appState.dash_strc_p;
-  const assets = btcValue + strcValue;
+  const totalAssetsRaw = btcValue + strcValue;
+  const totalAssetsPlusCash = totalAssetsRaw + currentCash;
 
+  // NETTO & SPREAD
   const btcNet = btcValue * 0.98;
   const strcNet = strcValue * 0.99;
   const netLiquidation = btcNet + strcNet + currentCash - finStatus.debt;
 
+  // NEUE KPIS: Zins-Saldo, LTV, Avg Buy
+  const zinsSaldo = totalIncome - finStatus.interest;
+  const ltv = totalAssetsPlusCash > 0 ? (finStatus.debt / totalAssetsPlusCash * 100) : 0;
+  const avgBtc = btcBoughtAmount > 0 ? (btcInvested / btcBoughtAmount) : 0;
+
+  // Break-Even BTC-Kurs
+  let breakEvenBtc = 0;
+  if(appState.dash_btc_a > 0) {
+      breakEvenBtc = (finStatus.debt - currentCash - strcNet) / (appState.dash_btc_a * 0.98);
+  }
+
+  // DYNAMISCHE FARBEN FÜR NETTO-BOX
+  const netCard = document.getElementById('net_card');
+  const netLabel = document.getElementById('net_label');
+  const netVal = document.getElementById('dash_kpi_net');
+  const zinsSaldoVal = document.getElementById('dash_kpi_zins_saldo');
+  const breakEvenVal = document.getElementById('dash_kpi_breakeven');
+
+  if (netLiquidation < 0) {
+      netCard.style.borderColor = 'var(--danger)';
+      netCard.style.backgroundColor = 'var(--danger-bg)';
+      netLabel.style.color = 'var(--danger)';
+      netVal.className = 'kval neg';
+  } else {
+      netCard.style.borderColor = 'var(--success)';
+      netCard.style.backgroundColor = 'var(--success-bg)';
+      netLabel.style.color = 'var(--success)';
+      netVal.className = 'kval pos';
+  }
+
+  zinsSaldoVal.className = zinsSaldo < 0 ? 'kval neg' : 'kval pos';
+
+  if(appState.dash_btc_a <= 0) {
+      breakEvenVal.innerText = "-";
+      breakEvenVal.style.color = 'var(--text-muted)';
+  } else if (breakEvenBtc <= 0) {
+      breakEvenVal.innerText = "Schon erreicht! 🎉";
+      breakEvenVal.style.color = 'var(--success)';
+  } else {
+      breakEvenVal.innerText = Math.round(breakEvenBtc).toLocaleString() + " €";
+      breakEvenVal.style.color = 'var(--text-main)';
+  }
+
+  // WERTE EINTRAGEN
   document.getElementById('dash_kpi_debt').innerText = Math.round(finStatus.debt).toLocaleString() + " €";
-  document.getElementById('dash_kpi_assets').innerText = Math.round(assets).toLocaleString() + " €";
+  document.getElementById('dash_kpi_assets').innerText = Math.round(totalAssetsRaw).toLocaleString() + " €";
   document.getElementById('dash_kpi_cash').innerText = Math.round(currentCash).toLocaleString() + " €";
   document.getElementById('dash_kpi_interest_paid').innerText = Math.round(finStatus.interest).toLocaleString() + " €";
   document.getElementById('dash_kpi_income_received').innerText = Math.round(totalIncome).toLocaleString() + " €";
   document.getElementById('dash_kpi_net').innerText = Math.round(netLiquidation).toLocaleString() + " €";
+  
+  document.getElementById('dash_kpi_zins_saldo').innerText = (zinsSaldo > 0 ? "+" : "") + Math.round(zinsSaldo).toLocaleString() + " €";
+  document.getElementById('dash_kpi_ltv').innerText = ltv.toFixed(1) + " %";
+  document.getElementById('dash_kpi_avg_btc').innerText = Math.round(avgBtc).toLocaleString() + " €";
 
-  updateChart(btcValue, strcValue, currentCash);
+  updateCharts(btcValue, strcValue, currentCash, finStatus.debt, totalAssetsPlusCash);
   runSim();
 }
 
-function updateChart(b, s, c) {
-  const ctx = document.getElementById('donutChart').getContext('2d');
+function updateCharts(b, s, c, debt, totalAssets) {
+  const ctxDonut = document.getElementById('donutChart').getContext('2d');
   if(donutChartInst) donutChartInst.destroy();
-  donutChartInst = new Chart(ctx, {
+  donutChartInst = new Chart(ctxDonut, {
     type: 'doughnut',
     data: { labels: ['BTC', 'STRC', 'Cash'], datasets: [{ data: [b, s, Math.max(0,c)], backgroundColor: ['#fbbf24', '#6366f1', '#10b981'], borderWidth: 0 }] },
-    options: { maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { color: '#94a3b8' } } } }
+    options: { maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { color: '#94a3b8' } } } }
+  });
+
+  const ctxBar = document.getElementById('barChart').getContext('2d');
+  if(barChartInst) barChartInst.destroy();
+  barChartInst = new Chart(ctxBar, {
+    type: 'bar',
+    data: {
+      labels: ['Bilanz'],
+      datasets: [
+        { label: 'Vermögen', data: [totalAssets], backgroundColor: '#3b82f6', barThickness: 20 },
+        { label: 'Restschuld', data: [debt], backgroundColor: '#ef4444', barThickness: 20 }
+      ]
+    },
+    options: {
+      indexAxis: 'y',
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: { x: { display: false }, y: { display: false } }
+    }
   });
 }
 
