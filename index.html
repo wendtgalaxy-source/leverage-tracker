@@ -81,11 +81,14 @@
         <div style="height: 200px;"><canvas id="donutChart"></canvas></div>
       </div>
     </div>
+    
     <div class="card">
-      <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap:15px;">
+      <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap:15px;">
         <div class="kpi-box"><label>Restschuld</label><span class="kval neg" id="dash_kpi_debt">0 €</span></div>
         <div class="kpi-box"><label>Portfolio (Brutto)</label><span class="kval pos" id="dash_kpi_assets">0 €</span></div>
         <div class="kpi-box" style="border-color: var(--accent-indigo);"><label>TR Cash Puffer</label><span class="kval" id="dash_kpi_cash" style="color:var(--accent-indigo)">0 €</span></div>
+        <div class="kpi-box"><label>Gezahlte Zinsen</label><span class="kval neg" id="dash_kpi_interest_paid" style="font-size:18px;">0 €</span></div>
+        <div class="kpi-box"><label>Erhaltene Zinsen</label><span class="kval pos" id="dash_kpi_income_received" style="font-size:18px;">0 €</span></div>
       </div>
       <div class="kpi-box" style="margin-top:15px; background:var(--success-bg); border-color:var(--success);">
         <label style="color:var(--success)">Netto Liquidationswert (Inkl. Spread & Puffer)</label>
@@ -151,7 +154,11 @@
       <div style="display:grid; grid-template-columns: 1fr; gap:10px;">
         <div class="form-group"><label>Zins Kredit p.a. (%)</label><input type="number" id="set_credit_interest" step="0.01"></div>
         <div class="form-group"><label>Monatliche Rate (€)</label><input type="number" id="set_credit_rate"></div>
-        <div class="form-group"><label>Datum erste Rate</label><input type="date" id="set_credit_start"></div>
+        <div class="form-group">
+          <label>Kredit Startdatum (Auszahlung)</label>
+          <input type="date" id="set_credit_start">
+          <p style="font-size: 10px; color: var(--text-muted); margin-top: 4px;">Tipp: Die erste Rate wird exakt einen Monat nach diesem Datum verbucht.</p>
+        </div>
       </div>
       <button class="btn" onclick="saveSettings()">💾 Speichern</button>
     </div>
@@ -316,8 +323,13 @@ function getMonths(startStr, endObj) {
 
 function calculateDebtIterative(initialDebt, months) {
   let debt = initialDebt;
-  for(let i=0; i < months; i++) { debt = debt * (1 + (appState.cred_int || 0)/100/12) - (appState.cred_rate || 0); }
-  return Math.max(0, debt);
+  let totalInterest = 0;
+  for(let i=0; i < months; i++) { 
+    let monthlyInterest = debt * ((appState.cred_int || 0)/100/12);
+    totalInterest += monthlyInterest;
+    debt = debt + monthlyInterest - (appState.cred_rate || 0); 
+  }
+  return { debt: Math.max(0, debt), interest: totalInterest };
 }
 
 function runDashboardCalc() {
@@ -329,14 +341,18 @@ function runDashboardCalc() {
 
   const initialDebt = appState.transactions.filter(t => t.type === 'CREDIT_IN').reduce((sum, t) => sum + t.fiat, 0);
   let logCash = 0;
+  let totalIncome = 0;
+  
   appState.transactions.forEach(t => {
     const type = t.type || 'BUY';
     if(type === 'CREDIT_IN' || type === 'SELL' || type === 'ZINS') logCash += t.fiat;
     if(type === 'BUY') logCash -= t.fiat;
+    if(type === 'ZINS') totalIncome += t.fiat; 
   });
 
   const monthsPassed = getMonths(appState.cred_start, new Date());
-  const currentDebt = calculateDebtIterative(initialDebt, monthsPassed);
+  const finStatus = calculateDebtIterative(initialDebt, monthsPassed);
+  
   const totalRatesPaid = monthsPassed * (appState.cred_rate || 0);
   const currentCash = Math.max(0, logCash - totalRatesPaid);
   
@@ -344,14 +360,15 @@ function runDashboardCalc() {
   const strcValue = appState.dash_strc_a * appState.dash_strc_p;
   const assets = btcValue + strcValue;
 
-  // NETTO LIQUIDATIONSWERT inkl. Spread: BTC -2%, STRC -1%
   const btcNet = btcValue * 0.98;
   const strcNet = strcValue * 0.99;
-  const netLiquidation = btcNet + strcNet + currentCash - currentDebt;
+  const netLiquidation = btcNet + strcNet + currentCash - finStatus.debt;
 
-  document.getElementById('dash_kpi_debt').innerText = Math.round(currentDebt).toLocaleString() + " €";
+  document.getElementById('dash_kpi_debt').innerText = Math.round(finStatus.debt).toLocaleString() + " €";
   document.getElementById('dash_kpi_assets').innerText = Math.round(assets).toLocaleString() + " €";
   document.getElementById('dash_kpi_cash').innerText = Math.round(currentCash).toLocaleString() + " €";
+  document.getElementById('dash_kpi_interest_paid').innerText = Math.round(finStatus.interest).toLocaleString() + " €";
+  document.getElementById('dash_kpi_income_received').innerText = Math.round(totalIncome).toLocaleString() + " €";
   document.getElementById('dash_kpi_net').innerText = Math.round(netLiquidation).toLocaleString() + " €";
 
   updateChart(btcValue, strcValue, currentCash);
@@ -380,18 +397,17 @@ function runSim() {
     if(type === 'BUY') logCash -= t.fiat;
   });
   const monthsToExit = getMonths(appState.cred_start, exitDate);
-  const simDebt = calculateDebtIterative(initialDebt, monthsToExit);
+  const simFin = calculateDebtIterative(initialDebt, monthsToExit);
   const simCash = Math.max(0, logCash - (monthsToExit * (appState.cred_rate || 0)));
 
   const futureBtcValue = appState.dash_btc_a * btcTarget;
   const futureStrcValue = appState.dash_strc_a * appState.dash_strc_p;
   
-  // SIMULATOR NETTO: BTC -2%, STRC -1%
   const futureBtcNet = futureBtcValue * 0.98;
   const futureStrcNet = futureStrcValue * 0.99;
-  const simResult = futureBtcNet + futureStrcNet + simCash - simDebt;
+  const simResult = futureBtcNet + futureStrcNet + simCash - simFin.debt;
   
-  document.getElementById('sim_debt_at_exit').innerText = Math.round(simDebt).toLocaleString() + " €";
+  document.getElementById('sim_debt_at_exit').innerText = Math.round(simFin.debt).toLocaleString() + " €";
   document.getElementById('sim_cash_at_exit').innerText = Math.round(simCash).toLocaleString() + " €";
   document.getElementById('sim_result').innerText = Math.round(simResult).toLocaleString() + " €";
 }
