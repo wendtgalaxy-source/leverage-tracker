@@ -92,20 +92,28 @@
           <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
             <div class="kpi-box"><label>🏦 Restschuld</label><span class="kval neg" id="dash_kpi_debt">0 €</span></div>
             <div class="kpi-box"><label>📈 Portfolio (Brutto)</label><span class="kval pos" id="dash_kpi_assets">0 €</span></div>
-            <div class="kpi-box"><label>💶 TR Cash Puffer</label><span class="kval" id="dash_kpi_cash" style="color:var(--accent-indigo)">0 €</span></div>
+            <div class="kpi-box" style="border-color: var(--accent-indigo);"><label>💶 TR Cash Puffer</label><span class="kval" id="dash_kpi_cash" style="color:var(--accent-indigo)">0 €</span></div>
             <div class="kpi-box"><label>📊 LTV (Risiko)</label><span class="kval" id="dash_kpi_ltv">0 %</span></div>
           </div>
         </div>
 
         <div class="card" style="margin-bottom: 20px;">
-          <h2>Performance & Zinsen</h2>
+          <h2>Cashflow (Zinsen)</h2>
           <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
-            <div class="kpi-box"><label>💸 Gezahlte Zinsen</label><span class="kval neg" id="dash_kpi_interest_paid">0 €</span></div>
-            <div class="kpi-box"><label>🤑 Erhaltene Zinsen</label><span class="kval pos" id="dash_kpi_income_received">0 €</span></div>
-            <div class="kpi-box"><label>⚖️ Zins-Saldo</label><span class="kval" id="dash_kpi_zins_saldo">0 €</span></div>
-            <div class="kpi-box"><label>🛒 Avg. Buy BTC</label><span class="kval" id="dash_kpi_avg_btc">0 €</span></div>
+            <div class="kpi-box"><label>💸 Gezahlt</label><span class="kval neg" id="dash_kpi_interest_paid">0 €</span></div>
+            <div class="kpi-box"><label>🤑 Erhalten</label><span class="kval pos" id="dash_kpi_income_received">0 €</span></div>
+            <div class="kpi-box" style="grid-column: span 2;"><label>⚖️ Zins-Saldo</label><span class="kval" id="dash_kpi_zins_saldo">0 €</span></div>
           </div>
         </div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom: 20px;">
+      <h2>Kurse & Währung</h2>
+      <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap:10px;">
+        <div class="kpi-box"><label>🛒 Avg. Buy BTC</label><span class="kval" id="dash_kpi_avg_btc">0 €</span></div>
+        <div class="kpi-box"><label>🛒 Avg. Buy STRC</label><span class="kval" id="dash_kpi_avg_strc">0 €</span></div>
+        <div class="kpi-box" style="border-color: var(--accent-indigo);"><label>💱 EUR / USD</label><span class="kval" id="dash_kpi_fx" style="color:var(--accent-indigo)">-</span></div>
       </div>
     </div>
 
@@ -205,6 +213,7 @@ const STORAGE_KEY = 'leverage_tracker_pro_data';
 let appState = {
   cred_int: 5.45, cred_rate: 717.40, cred_start: "2026-05-15",
   dash_btc_p: 65000, dash_strc_p: 92.0, dash_btc_a: 0, dash_strc_a: 0,
+  dash_fx: 0,
   transactions: []
 };
 
@@ -368,8 +377,9 @@ function runDashboardCalc() {
   const initialDebt = appState.transactions.filter(t => t.type === 'CREDIT_IN').reduce((sum, t) => sum + t.fiat, 0);
   let logCash = 0;
   let totalIncome = 0;
-  let btcInvested = 0;
-  let btcBoughtAmount = 0;
+  
+  let btcInvested = 0, btcBoughtAmount = 0;
+  let strcInvested = 0, strcBoughtAmount = 0;
   
   appState.transactions.forEach(t => {
     const type = t.type || 'BUY';
@@ -377,11 +387,8 @@ function runDashboardCalc() {
     if(type === 'BUY') logCash -= t.fiat;
     if(type === 'ZINS') totalIncome += t.fiat; 
     
-    // Für Average Buy
-    if(t.asset === 'BTC' && type === 'BUY') {
-        btcInvested += t.fiat;
-        btcBoughtAmount += t.amount;
-    }
+    if(t.asset === 'BTC' && type === 'BUY') { btcInvested += t.fiat; btcBoughtAmount += t.amount; }
+    if(t.asset === 'STRC' && type === 'BUY') { strcInvested += t.fiat; strcBoughtAmount += t.amount; }
   });
 
   const monthsPassed = getMonths(appState.cred_start, new Date());
@@ -395,23 +402,21 @@ function runDashboardCalc() {
   const totalAssetsRaw = btcValue + strcValue;
   const totalAssetsPlusCash = totalAssetsRaw + currentCash;
 
-  // NETTO & SPREAD
   const btcNet = btcValue * 0.98;
   const strcNet = strcValue * 0.99;
   const netLiquidation = btcNet + strcNet + currentCash - finStatus.debt;
 
-  // NEUE KPIS: Zins-Saldo, LTV, Avg Buy
   const zinsSaldo = totalIncome - finStatus.interest;
   const ltv = totalAssetsPlusCash > 0 ? (finStatus.debt / totalAssetsPlusCash * 100) : 0;
   const avgBtc = btcBoughtAmount > 0 ? (btcInvested / btcBoughtAmount) : 0;
+  const avgStrc = strcBoughtAmount > 0 ? (strcInvested / strcBoughtAmount) : 0;
 
-  // Break-Even BTC-Kurs
   let breakEvenBtc = 0;
   if(appState.dash_btc_a > 0) {
       breakEvenBtc = (finStatus.debt - currentCash - strcNet) / (appState.dash_btc_a * 0.98);
   }
 
-  // DYNAMISCHE FARBEN FÜR NETTO-BOX
+  // UI Updates
   const netCard = document.getElementById('net_card');
   const netLabel = document.getElementById('net_label');
   const netVal = document.getElementById('dash_kpi_net');
@@ -443,7 +448,6 @@ function runDashboardCalc() {
       breakEvenVal.style.color = 'var(--text-main)';
   }
 
-  // WERTE EINTRAGEN
   document.getElementById('dash_kpi_debt').innerText = Math.round(finStatus.debt).toLocaleString() + " €";
   document.getElementById('dash_kpi_assets').innerText = Math.round(totalAssetsRaw).toLocaleString() + " €";
   document.getElementById('dash_kpi_cash').innerText = Math.round(currentCash).toLocaleString() + " €";
@@ -454,6 +458,9 @@ function runDashboardCalc() {
   document.getElementById('dash_kpi_zins_saldo').innerText = (zinsSaldo > 0 ? "+" : "") + Math.round(zinsSaldo).toLocaleString() + " €";
   document.getElementById('dash_kpi_ltv').innerText = ltv.toFixed(1) + " %";
   document.getElementById('dash_kpi_avg_btc').innerText = Math.round(avgBtc).toLocaleString() + " €";
+  document.getElementById('dash_kpi_avg_strc').innerText = (Math.round(avgStrc * 100) / 100).toLocaleString('de-DE', {minimumFractionDigits: 2}) + " €";
+  
+  document.getElementById('dash_kpi_fx').innerText = appState.dash_fx ? "1 € = " + appState.dash_fx.toFixed(4) + " $" : "-";
 
   updateCharts(btcValue, strcValue, currentCash, finStatus.debt, totalAssetsPlusCash);
   runSim();
@@ -532,8 +539,13 @@ async function fetchLivePrices() {
   try {
     const rB = await fetch('https://api.coinbase.com/v2/prices/BTC-EUR/spot');
     const jB = await rB.json(); document.getElementById('dash_btc_price').value = Math.round(jB.data.amount);
-    const rE = await fetch('https://open.er-api.com/v6/latest/USD');
-    const jE = await rE.json(); document.getElementById('dash_strc_price').value = (100 * jE.rates.EUR).toFixed(2);
+    
+    // Holt den Basis-Euro Kurs, um 1 EUR in USD anzuzeigen und den STRC Preis auf 100$ Basis zu berechnen
+    const rE = await fetch('https://open.er-api.com/v6/latest/EUR');
+    const jE = await rE.json(); 
+    appState.dash_fx = jE.rates.USD;
+    document.getElementById('dash_strc_price').value = (100 / jE.rates.USD).toFixed(2);
+    
     runDashboardCalc();
   } catch(e) { console.error("Kurs-Fehler"); }
 }
