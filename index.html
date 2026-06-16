@@ -110,10 +110,10 @@
 
     <div class="card" style="margin-bottom: 20px;">
       <h2>Kurse & Währung</h2>
-      <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap:10px;">
+      <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
         <div class="kpi-box"><label>🛒 Avg. Buy BTC</label><span class="kval" id="dash_kpi_avg_btc">0 €</span></div>
         <div class="kpi-box"><label>🛒 Avg. Buy STRC</label><span class="kval" id="dash_kpi_avg_strc">0 €</span></div>
-        <div class="kpi-box" style="border-color: var(--accent-indigo);"><label>💱 EUR / USD</label><span class="kval" id="dash_kpi_fx" style="color:var(--accent-indigo)">-</span></div>
+        <div class="kpi-box" style="grid-column: span 2; border-color: var(--accent-indigo);"><label>💱 EUR / USD</label><span class="kval" id="dash_kpi_fx" style="color:var(--accent-indigo)">-</span></div>
       </div>
     </div>
 
@@ -540,7 +540,6 @@ async function fetchLivePrices() {
     const rB = await fetch('https://api.coinbase.com/v2/prices/BTC-EUR/spot');
     const jB = await rB.json(); document.getElementById('dash_btc_price').value = Math.round(jB.data.amount);
     
-    // Holt den Basis-Euro Kurs, um 1 EUR in USD anzuzeigen und den STRC Preis auf 100$ Basis zu berechnen
     const rE = await fetch('https://open.er-api.com/v6/latest/EUR');
     const jE = await rE.json(); 
     appState.dash_fx = jE.rates.USD;
